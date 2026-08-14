@@ -112,6 +112,18 @@ def main():
             j["project"] = meta.get("project")
             j["session"] = meta.get("session")
 
+    decisions_path = os.path.join(FINDINGS, "rule_decisions.json")
+    decisions = {}
+    if os.path.exists(decisions_path):
+        decisions = {
+            k: v
+            for k, v in json.load(open(decisions_path)).items()
+            if not k.startswith("_")
+        }
+        forced = [k for k, v in decisions.items() if v.get("decision") == "rule"]
+        if forced:
+            print(f"the user's rulings force in: {', '.join(sorted(forced))}")
+
     clusters = collections.defaultdict(list)
     for j in judged:
         clusters[(j.get("class", "A"), j.get("kind", "other"))].append(j)
@@ -124,17 +136,23 @@ def main():
         fixes = collections.Counter(i.get("fixable_by", "neither") for i in items)
         fixable_by = fixes.most_common(1)[0][0]
 
-        # the user asking for a rule outranks the threshold. The bar exists to stop
-        # rules being built on one-off noise from a model's judgement; it has no
-        # business overruling the person the rules are for. The 1Password signing
-        # timeout has one transcript episode and is, by his account, the most
-        # frequent failure they hit - the evidence simply is not in the corpus.
-        by_fiat = any(i.get("corrected_by_greg") and i.get("source") == "greg" for i in items)
-        meets_bar = by_fiat or (
+        # the user's ruling outranks the threshold in both directions. The bar exists
+        # to stop rules being built on one-off noise from a model's judgement; it
+        # has no business overruling the person the rules are for. Every pattern
+        # they have forced in was rejected only for lacking a repeat - which means
+        # only that they never had to say it twice.
+        ruling = decisions.get(kind, {}).get("decision")
+        automatic = (
             len(items) >= MIN_INCIDENTS
             and len(repeats) >= 1
             and fixable_by in ("rule", "hook")
         )
+        if ruling == "rule":
+            meets_bar = True
+        elif ruling == "not_a_rule":
+            meets_bar = False
+        else:
+            meets_bar = automatic
         patterns.append(
             {
                 "class": klass,
