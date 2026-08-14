@@ -68,6 +68,18 @@ def incident_html(inc, index):
     if conf is not None:
         meta.append(f'<span>conf {float(conf):.2f}</span>')
 
+    occurrences = int(inc.get("occurrences") or 1)
+    if occurrences > 1:
+        flags.insert(
+            0,
+            f'<span class="pill quiet">{occurrences} turns, one episode</span>',
+        )
+
+    also = "".join(
+        f'<blockquote class="said also">{esc(q)}</blockquote>'
+        for q in (inc.get("also_said") or [])
+    )
+
     return f"""
       <article class="inc" data-repeat="{str(bool(inc.get('repeat_after_instruction'))).lower()}" data-sev="{sev:.1f}" data-class="{esc(inc.get('class'))}">
         <div class="inc-head">
@@ -76,6 +88,7 @@ def incident_html(inc, index):
           <div class="inc-flags">{''.join(flags)}</div>
         </div>
         <blockquote class="said">{esc(inc.get('evidence_quote'))}</blockquote>
+        {also}
         <dl>
           <dt>Claude did</dt><dd>{esc(inc.get('what_claude_did'))}</dd>
           <dt>the user wanted</dt><dd>{esc(inc.get('what_greg_wanted'))}</dd>
@@ -118,17 +131,16 @@ def pattern_html(pattern, incidents):
 
 def main():
     patterns = load("findings.jsonl")
-    judged = [j for j in load("judged.jsonl") if j.get("confirmed")]
-    triaged = {t["id"]: t for t in load("triaged.jsonl")}
     survival = load("comment_survival.json", jsonl=False)
     style = load("style_comparison.json", jsonl=False)
 
-    for j in judged:
-        meta = triaged.get(j["id"], {})
-        j["severity"] = meta.get("severity", 5.0)
-        j["source"] = meta.get("source")
-        j["ts"] = meta.get("ts")
-        j["project"] = meta.get("project")
+    # Deduped episodes are the unit of reporting. A single argument spans several
+    # flagged messages; listing each one makes the report read as duplicated
+    # because it is.
+    judged = load("incidents.jsonl")
+    raw_count = sum(1 for j in load("judged.jsonl") if j.get("confirmed"))
+    if not judged:
+        sys.exit("no findings/incidents.jsonl - run dedupe_incidents.py first")
 
     by_pattern = collections.defaultdict(list)
     for j in judged:
@@ -152,6 +164,8 @@ def main():
         .replace("{{BAR}}", str(sum(1 for p in patterns if p["meets_rule_bar"])))
         .replace("{{REPEATS}}", str(repeats))
         .replace("{{SHRINKS}}", str(shrinks))
+        .replace("{{RAW}}", str(raw_count))
+        .replace("{{COLLAPSED}}", str(raw_count - len(judged)))
         .replace("{{CLAUDE_CHARS}}", str(int(style["profiles"][1]["body_chars_median"])))
         .replace("{{USER_CHARS}}", str(int(style["profiles"][0]["body_chars_median"])))
         .replace("{{RATIO}}", str(style["ratios"]["body_chars_median"]))

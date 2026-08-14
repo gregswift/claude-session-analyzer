@@ -94,16 +94,23 @@ def load_severity():
 
 def main():
     ensure_findings_dir()
-    judged = [j for j in load_judged() if j.get("confirmed")]
-    sev = load_severity()
-
-    for j in judged:
-        meta = sev.get(j["id"], {})
-        j["severity"] = meta.get("severity", 5.0)
-        j["source"] = meta.get("source")
-        j["ts"] = meta.get("ts")
-        j["project"] = meta.get("project")
-        j["session"] = meta.get("session")
+    # Prefer deduped episodes. One argument produces several flagged messages,
+    # and counting them separately inflates the patterns the user pushed hardest on.
+    episodes = os.path.join(FINDINGS, "incidents.jsonl")
+    if os.path.exists(episodes):
+        judged = [json.loads(line) for line in open(episodes)]
+        print(f"ranking {len(judged)} deduped episodes")
+    else:
+        judged = [j for j in load_judged() if j.get("confirmed")]
+        sev = load_severity()
+        print(f"ranking {len(judged)} raw incidents (run dedupe_incidents.py first)")
+        for j in judged:
+            meta = sev.get(j["id"], {})
+            j["severity"] = meta.get("severity", 5.0)
+            j["source"] = meta.get("source")
+            j["ts"] = meta.get("ts")
+            j["project"] = meta.get("project")
+            j["session"] = meta.get("session")
 
     clusters = collections.defaultdict(list)
     for j in judged:

@@ -146,6 +146,7 @@
     border-left: 2px solid var(--rule-strong);
     font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--ink);
   }
+  .said.also { margin-top: -0.25rem; opacity: 0.75; font-size: 0.94rem; }
   .inc dl {
     margin: 0; display: grid; grid-template-columns: 8.5rem 1fr;
     gap: 0.35rem 1rem; font-size: 0.92rem;
@@ -226,15 +227,16 @@
     <h1>Correction Record</h1>
     <p class="standfirst">
       Every place the user pushed back on Claude, swept from 95 local session transcripts and 60
-      exported chats, then confirmed one at a time. All {{CONFIRMED}} confirmed incidents are
-      listed in full below — a kind name is not enough to decide whether a pattern is worth
-      fixing.
+      exported chats, confirmed one at a time, then collapsed into distinct episodes. All
+      {{CONFIRMED}} are listed in full below — a kind name is not enough to decide whether a
+      pattern is worth fixing.
     </p>
     <div class="funnel">
       <div><div class="n">2,190</div><div class="k">Messages the user wrote</div></div>
       <div><div class="n">1,080</div><div class="k">Candidate windows</div></div>
       <div><div class="n">325</div><div class="k">Triaged corrections</div></div>
-      <div><div class="n">{{CONFIRMED}}</div><div class="k">Confirmed</div></div>
+      <div><div class="n">{{RAW}}</div><div class="k">Confirmed</div></div>
+      <div><div class="n">{{CONFIRMED}}</div><div class="k">Distinct episodes</div></div>
       <div><div class="n">{{BAR}}</div><div class="k">Clear the bar</div></div>
     </div>
   </header>
@@ -273,17 +275,19 @@
     <div class="sechead">
       <h2>Every confirmed incident</h2>
       <p class="prose note">
-        {{CONFIRMED}} incidents in {{PATTERNS}} patterns, ordered by incidents × median severity.
+        {{CONFIRMED}} episodes in {{PATTERNS}} patterns, ordered by episodes × median severity.
         Bar-clearing patterns are expanded; the rest are collapsed. Within each pattern, repeats
         come first, then descending severity. Severity is derived only from era-stable signals:
         how long the user sat through before objecting, how much work rested on the mistake, whether
-        the thread was abandoned, whether it had already been said.
+        the thread was abandoned, whether it had already been said. Where one argument spans several
+        messages they are merged and tagged <em>“N turns, one episode”</em>, with the follow-on
+        quotes shown underneath the first.
       </p>
     </div>
 
     <div class="filters">
       <span>Filter</span>
-      <button type="button" data-filter="all" aria-pressed="true">All {{CONFIRMED}}</button>
+      <button type="button" data-filter="all" aria-pressed="true">All {{CONFIRMED}} episodes</button>
       <button type="button" data-filter="repeat" aria-pressed="false">Repeats only ({{REPEATS}})</button>
       <button type="button" data-filter="sev" aria-pressed="false">Severity ≥ 3.5</button>
       <button type="button" data-filter="A" aria-pressed="false">Class A — what Claude did</button>
@@ -455,11 +459,25 @@
         would have buried everything earlier and most of the chat corpus.
       </p>
       <p>
-        <strong>Coverage is complete, but three stages needed repair.</strong> The triage model
+        <strong>One argument is one episode.</strong> the user, reading the first draft: <em>“quite a
+        few of the findings seem to actually be duplicates of each other.”</em> They were. The
+        finders flag every message that looks like pushback, so a single argument — he objects,
+        Claude answers badly, he objects again — produced several confirmed incidents, inflating
+        exactly the patterns he pushed hardest on. Incidents sharing a session and a kind within
+        12 turns, or quoting the same words, are now merged: {{RAW}} confirmed incidents collapse
+        to {{CONFIRMED}} episodes. The merge keeps the worst member, never the last, because
+        losing a repeat flag would silently drop a pattern below the rule bar. There is no natural
+        break in the threshold curve — 12 turns is a judgment call, and
+        <code>dedupe_incidents.py --sensitivity</code> shows what other choices would give.
+      </p>
+      <p>
+        <strong>Coverage is complete, but four stages needed repair.</strong> The triage model
         silently dropped 19 of 1,080 items while reporting full counts; the judges dropped 2 of
         325. Both were backfilled by hand. The comment extractor first emitted one item per
         comment <em>line</em>, which would have length-weighted the fail rate — 2,546 fragments
-        were regrouped into 852 blocks and re-judged.
+        were regrouped into 852 blocks and re-judged. And session counts undercounted the chat
+        corpus until the dedup pass rebuilt them from message ids: <code>bad_assumption</code>
+        was reported across 13 sessions, when the real figure is 27.
       </p>
       <p>
         <strong>A judged rate is only as good as its rubric.</strong> The comment pass is the
