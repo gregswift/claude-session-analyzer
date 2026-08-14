@@ -209,14 +209,34 @@ def apply_overrides(incidents):
         return 0
     overrides = json.load(open(path))
     applied = 0
+
+    # Entries marked _standalone are rules the user called for directly rather than
+    # corrections to an existing finding. They enter as their own episode: the
+    # 1Password signing timeout is standalone because they say it is the most
+    # frequent failure they hit, and a corpus count cannot see it - the away-from-
+    # desk timeouts leave no transcript, and it missed the one that hit the very
+    # session where this was written.
+    for key, patch in overrides.items():
+        if not patch.get("_standalone"):
+            continue
+        row = {k: v for k, v in patch.items() if k != "_standalone"}
+        row.update({"id": key, "confirmed": True, "corrected_by_greg": True,
+                    "merged_ids": [key], "source": "greg", "confidence": 1.0})
+        row.setdefault("occurrences", 1)
+        incidents.append(row)
+        applied += 1
+
     for inc in incidents:
         patch = overrides.get(inc["id"])
-        if not patch:
+        if not patch or patch.get("_standalone"):
             continue
         inc.update(patch)
         inc["corrected_by_greg"] = True
         applied += 1
-    unknown = set(overrides) - {i["id"] for i in incidents}
+
+    unknown = {
+        k for k, v in overrides.items() if not v.get("_standalone")
+    } - {i["id"] for i in incidents}
     if unknown:
         print(f"WARNING: {len(unknown)} override ids match no incident: {sorted(unknown)}")
     return applied

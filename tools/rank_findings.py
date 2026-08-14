@@ -124,7 +124,13 @@ def main():
         fixes = collections.Counter(i.get("fixable_by", "neither") for i in items)
         fixable_by = fixes.most_common(1)[0][0]
 
-        meets_bar = (
+        # the user asking for a rule outranks the threshold. The bar exists to stop
+        # rules being built on one-off noise from a model's judgement; it has no
+        # business overruling the person the rules are for. The 1Password signing
+        # timeout has one transcript episode and is, by his account, the most
+        # frequent failure they hit - the evidence simply is not in the corpus.
+        by_fiat = any(i.get("corrected_by_greg") and i.get("source") == "greg" for i in items)
+        meets_bar = by_fiat or (
             len(items) >= MIN_INCIDENTS
             and len(repeats) >= 1
             and fixable_by in ("rule", "hook")
