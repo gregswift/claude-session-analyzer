@@ -75,7 +75,7 @@ def main():
         "profiles": [
             p
             for p in (
-                profile(hand, "greg_hand_written"),
+                profile(hand, "user_hand_written"),
                 profile(claude, "claude_co_authored"),
                 profile(others, "other_humans_same_repos"),
             )
@@ -83,7 +83,7 @@ def main():
         ],
     }
 
-    hand_p = next(p for p in result["profiles"] if p["label"] == "greg_hand_written")
+    hand_p = next(p for p in result["profiles"] if p["label"] == "user_hand_written")
     claude_p = next(
         p for p in result["profiles"] if p["label"] == "claude_co_authored"
     )

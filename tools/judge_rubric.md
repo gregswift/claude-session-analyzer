@@ -32,7 +32,7 @@ aloud, or reacting to something outside Claude's control.
   "class": "A",
   "kind": "scope_creep",
   "what_claude_did": "one sentence, concrete, from the window",
-  "what_greg_wanted": "one sentence",
+  "what_user_wanted": "one sentence",
   "rule_candidate": "the instruction that would have prevented this, imperative, <=25 words",
   "fixable_by": "rule",
   "repeat_after_instruction": false,

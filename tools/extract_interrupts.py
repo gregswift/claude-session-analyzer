@@ -94,7 +94,7 @@ def main():
                         "tool_calls_since_prompt": len(since_prompt),
                         "file_writes_since_prompt": writes,
                         "tools_used": [t for t, _ in since_prompt][:40],
-                        "greg_last_said": (last_prompt or "")[:CLIP],
+                        "user_last_said": (last_prompt or "")[:CLIP],
                         "claude_last_said": last_text[:CLIP],
                         "claude_was_doing": [
                             {"tool": t, "input": p} for t, p in since_prompt[-4:]

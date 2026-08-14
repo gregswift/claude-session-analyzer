@@ -47,7 +47,7 @@ Return one object per input item:
   "kind": "scope_creep",
   "repeat_signal": false,
   "confidence": 0.8,
-  "quote": "<=140 chars from greg_said, verbatim",
+  "quote": "<=140 chars from user_said, verbatim",
   "one_line": "what Claude did wrong, in the user's terms"
 }
 ```

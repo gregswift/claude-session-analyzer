@@ -9,14 +9,18 @@ HOME = os.path.expanduser("~")
 PROJECTS = os.path.join(HOME, ".claude", "projects")
 
 
-def _output_arg():
-    """`--output PATH` / `-o PATH`, honoured by every tool in the pipeline."""
-    for flag in ("--output", "-o"):
+def _flag_arg(*flags):
+    """Value of the first of `flags` present in argv, honoured by every tool."""
+    for flag in flags:
         if flag in sys.argv:
             i = sys.argv.index(flag)
             if i + 1 < len(sys.argv):
                 return sys.argv[i + 1]
     return None
+
+
+def _output_arg():
+    return _flag_arg("--output", "-o")
 
 
 # Findings are generated output: they land under the working directory unless
@@ -26,7 +30,25 @@ FINDINGS = os.path.abspath(
     _output_arg() or os.environ.get("CSA_FINDINGS") or "findings"
 )
 
-CONFIG_PATH = os.environ.get("CSA_CONFIG") or "csa.config.json"
+LOCAL_CONFIG = "csa.config.json"
+USER_CONFIG = os.path.join(HOME, ".claude-session-analyzer.json")
+
+
+def resolve_config_path():
+    """--config PATH, then CSA_CONFIG, then ./csa.config.json, then
+    ~/.claude-session-analyzer.json. First hit wins. An explicitly named path is
+    returned whether or not it exists, so a typo is reported rather than
+    silently falling through to a different file."""
+    explicit = _flag_arg("--config") or os.environ.get("CSA_CONFIG")
+    if explicit:
+        return os.path.abspath(os.path.expanduser(explicit))
+    for candidate in (LOCAL_CONFIG, USER_CONFIG):
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate)
+    return None
+
+
+CONFIG_PATH = resolve_config_path()
 
 # Everything here is per-user. No corpus, employer, project or person belongs in
 # this file - see csa.config.example.json.
@@ -47,9 +69,12 @@ CONFIG_DEFAULTS = {
 
 def load_config():
     cfg = dict(CONFIG_DEFAULTS)
-    if os.path.exists(CONFIG_PATH):
+    if CONFIG_PATH and os.path.exists(CONFIG_PATH):
         with open(CONFIG_PATH) as fh:
             cfg.update(json.load(fh))
+        print(f"config: {CONFIG_PATH}")
+    elif CONFIG_PATH:
+        raise SystemExit(f"ERROR: no config file at {CONFIG_PATH}")
     return cfg
 
 
@@ -58,16 +83,191 @@ CONFIG = load_config()
 
 def config_required(key):
     """A missing value is a hard stop, not a silent default. Guessing here would
-    sweep the wrong corpus and the run would still report success."""
+    sweep the wrong corpus and the run would still report success.
+
+    With no config file at all and a terminal to ask on, offer to build one
+    first. Without a terminal - an agent, cron, CI - fail instead of prompting:
+    a prompt that nobody can answer blocks forever, which is worse than the
+    error it replaced."""
+    global CONFIG, CONFIG_PATH
     value = CONFIG.get(key)
-    if value in (None, "", [], {}):
-        raise SystemExit(
-            f"ERROR: '{key}' is not set.\n"
-            f"  Add it to {os.path.abspath(CONFIG_PATH)} "
-            f"(copy csa.config.example.json to start), or set CSA_CONFIG to "
-            f"another path."
+    if value not in (None, "", [], {}):
+        return value
+
+    if CONFIG_PATH is None and sys.stdin.isatty():
+        path = interactive_setup()
+        if path:
+            CONFIG_PATH = path
+            CONFIG = load_config()
+            value = CONFIG.get(key)
+            if value not in (None, "", [], {}):
+                return value
+
+    raise SystemExit(
+        f"ERROR: '{key}' is not set.\n"
+        f"  Looked for: ./{LOCAL_CONFIG}, then {USER_CONFIG}\n"
+        f"  Fix: copy csa.config.example.json to one of those, or pass\n"
+        f"       --config PATH, or set CSA_CONFIG."
+    )
+
+
+# --- first-run setup ----------------------------------------------------------
+# Every derived default is a guess shown for confirmation, never applied
+# silently. The point is to remove typing, not to decide on the user's behalf.
+
+
+def _run(cmd, cwd=None):
+    """Command stdout, or None if the command is missing or fails."""
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            cmd, cwd=cwd, capture_output=True, text=True, timeout=15
         )
-    return value
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip() if out.returncode == 0 and out.stdout.strip() else None
+
+
+def derive_author_emails():
+    found = []
+    for scope in (["git", "config", "--get", "user.email"],
+                  ["git", "config", "--global", "--get", "user.email"]):
+        value = _run(scope)
+        if value and value not in found:
+            found.append(value)
+    return found
+
+
+def derive_pr_author():
+    return _run(["gh", "api", "user", "--jq", ".login"]) or os.environ.get("USER", "")
+
+
+def derive_project_label_strip():
+    """build_report already strips the HOME prefix itself; this is for whatever
+    sits between HOME and the repo, which only the user can confirm."""
+    return []
+
+
+def _transcript_cwds():
+    cwds = set()
+    for _project, path in iter_transcripts():
+        for entry in read_jsonl(path):
+            if entry.get("cwd"):
+                cwds.add(entry["cwd"])
+                break
+    return cwds
+
+
+def derive_window_start():
+    """Earliest timestamp actually present in the corpus. Entries are written in
+    order, so the first one carrying a timestamp dates the session."""
+    earliest = None
+    for _project, path in iter_transcripts():
+        for entry in read_jsonl(path):
+            stamp = entry.get("timestamp")
+            if stamp:
+                day = stamp[:10]
+                if earliest is None or day < earliest:
+                    earliest = day
+                break
+    return earliest
+
+
+def discover_pr_repos():
+    """Walk the cwds the sessions ran in, resolve each to a git toplevel, and
+    read its origin. This is the value that used to be hardcoded, so discovery
+    is the default path rather than an afterthought."""
+    repos = set()
+    seen_tops = set()
+    for cwd in sorted(_transcript_cwds()):
+        if not os.path.isdir(cwd):
+            continue
+        top = _run(["git", "rev-parse", "--show-toplevel"], cwd=cwd)
+        if not top or top in seen_tops:
+            continue
+        seen_tops.add(top)
+        url = _run(["git", "remote", "get-url", "origin"], cwd=top)
+        if not url:
+            continue
+        slug = re.sub(r"^.*[:/]([^/:]+/[^/]+?)(?:\.git)?$", r"\1", url.strip())
+        if "/" in slug:
+            repos.add(slug)
+    return sorted(repos)
+
+
+def _ask(prompt, default):
+    shown = ", ".join(default) if isinstance(default, list) else (default or "")
+    reply = input(f"  {prompt}\n    [{shown or 'empty'}]: ").strip()
+    if not reply:
+        return default
+    if isinstance(default, list):
+        return [p.strip() for p in reply.split(",") if p.strip()]
+    return reply
+
+
+def interactive_setup():
+    """Build a config by confirming derived values. Returns the path written, or
+    None if the user declined."""
+    print("\nNo config file found. Building one now.")
+    print("Press Enter to accept each suggestion, or type a replacement.")
+    print("Comma-separate lists. Nothing is written until you confirm.\n")
+
+    cfg = dict(CONFIG_DEFAULTS)
+    print("Scanning the corpus for repos and dates...")
+    repos = discover_pr_repos()
+    window = derive_window_start()
+    print(f"  found {len(repos)} repo(s) with an origin remote\n")
+
+    cfg["author_emails"] = _ask(
+        "author_emails - your commit emails, so hand-written commits can be told"
+        " from co-authored ones", derive_author_emails())
+    cfg["pr_author"] = _ask(
+        "pr_author - the GitHub login whose PRs to collect", derive_pr_author())
+    cfg["pr_repos"] = _ask(
+        "pr_repos - repos to sweep for PRs, owner/name", repos)
+    cfg["window_start"] = _ask(
+        "window_start - ignore commits and PRs before this date", window or "")
+    cfg["excluded_sessions"] = _ask(
+        "excluded_sessions - session ids to leave out entirely, e.g. the session"
+        " that designed the sweep", [])
+    cfg["excluded_project_substrings"] = _ask(
+        "excluded_project_substrings - skip projects whose path contains these,"
+        " e.g. forks you did not author", [])
+    cfg["artifact_excluded_projects"] = _ask(
+        "artifact_excluded_projects - projects whose commits/PRs/comments are not"
+        " evidence, though their transcripts still are", [])
+    cfg["extra_roots"] = _ask(
+        "extra_roots - transcript directories copied from other machines", [])
+    cfg["project_label_strip"] = _ask(
+        "project_label_strip - cosmetic prefixes to drop from project names in"
+        " the report", derive_project_label_strip())
+
+    print("\nThis is what would be written:\n")
+    body = json.dumps(cfg, indent=2)
+    print(body + "\n")
+
+    # Saying so now beats a tool failing on it three commands later.
+    blank = [k for k, v in CONFIG_DEFAULTS.items()
+             if v is None and cfg.get(k) in (None, "", [], {})]
+    if blank:
+        print("Left empty, so the tools that need them will still stop:")
+        for key in blank:
+            print(f"  {key}")
+        print()
+
+    print(f"  1) {USER_CONFIG}   (applies wherever you run it)")
+    print(f"  2) ./{LOCAL_CONFIG}   (this directory only)")
+    print("  3) do not save")
+    choice = input("Save to [1]: ").strip() or "1"
+    if choice == "3":
+        print("Not saved.")
+        return None
+    target = os.path.abspath(LOCAL_CONFIG) if choice == "2" else USER_CONFIG
+    with open(target, "w") as fh:
+        fh.write(body + "\n")
+    print(f"\nWrote {target}")
+    return target
 
 
 EXCLUDED_SESSIONS = set(CONFIG["excluded_sessions"])

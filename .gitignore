@@ -1,4 +1,12 @@
+# Generated output. Holds verbatim session content and the user's own rulings on
+# it - not for committing, from any working directory the tools are run in.
 findings/
+**/findings/
+
+# Local configuration: names your repos, emails and corpus paths.
+csa.config.json
+.claude-session-analyzer.json
+
 __pycache__/
 *.pyc
 .venv/

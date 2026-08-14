@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy to ./csa.config.json or ~/.claude-session-analyzer.json and fill in. Override with --config PATH or CSA_CONFIG. Run any tool with no config on a terminal to have this generated for you.",
+
+  "author_emails": ["you@example.com", "you@work.example"],
+  "pr_repos": ["your-org/service-a", "your-org/service-b"],
+  "pr_author": "your-github-login",
+  "window_start": "2026-07-08",
+
+  "extra_roots": [
+    {"label": "laptop", "path": "~/corpora/claude-sessions-laptop"}
+  ],
+  "excluded_sessions": [],
+  "excluded_project_substrings": [],
+  "artifact_excluded_projects": [],
+  "project_label_strip": []
+}
