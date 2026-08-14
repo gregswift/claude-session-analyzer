@@ -64,33 +64,26 @@ def load_confirmed():
 
 
 def episodes(incidents, gap):
-    """Group into episodes. Returns a list of lists."""
-    buckets = collections.defaultdict(list)
-    for inc in incidents:
-        buckets[(inc["session"], inc["kind"])].append(inc)
+    """Group into episodes. Returns a list of lists.
 
-    groups = []
-    for items in buckets.values():
-        items.sort(key=lambda x: x["turn"])
-        run = [items[0]]
-        for nxt in items[1:]:
-            same_quote = norm(nxt["evidence_quote"])[:200] == norm(
-                run[-1]["evidence_quote"]
-            )[:200]
-            if nxt["turn"] - run[-1]["turn"] <= gap or same_quote:
-                run.append(nxt)
-            else:
-                groups.append(run)
-                run = [nxt]
-        groups.append(run)
+    Merging is on SHARED QUOTE ONLY. An earlier version also merged incidents
+    that sat close together in one session under the same kind label, on the
+    theory that they were one argument. Measuring the semantic similarity inside
+    those merges killed the theory: 12 of 16 scored between 0.01 and 0.11, i.e.
+    they were unrelated failures that happened to be adjacent and share a label.
+    The user found one by reading it - a diagram misreading merged with an
+    inaccessible-file-path complaint four turns later.
 
-    # Second pass, across sessions. Resuming a session writes a new transcript
-    # that replays the earlier messages, so the same words reach the judges under
-    # two different session ids and the session-bucketed pass above cannot see it.
-    #
-    # Match on EVERY quote in a group, not just the first one: a group that
-    # already merged several turns holds several quotes, and the shared one is
-    # not necessarily the one it happens to lead with.
+    Proximity means two things went wrong near each other, not that one thing
+    went wrong. Only an identical quote proves the judges wrote up the same
+    moment twice, which is what resumed transcripts and adjacent-turn framings
+    actually produce.
+    """
+    groups = [[inc] for inc in incidents]
+
+    # Union on quote. Resuming a session writes a new transcript that replays
+    # earlier messages, so the same words reach the judges under two session ids;
+    # and a single message is sometimes written up twice from adjacent turns.
     owner = {}  # (kind, quote) -> index of the group that claimed it
     parent = list(range(len(groups)))
 
@@ -153,6 +146,31 @@ def merge(group):
     return merged
 
 
+def apply_overrides(incidents):
+    """Let the user's rulings beat the judges'.
+
+    The judges are a rubric applied by a model; the user is the person the rule is
+    for. Where they have corrected a finding, their wording wins and survives a
+    re-run. Keyed by incident id in findings/overrides.json.
+    """
+    path = os.path.join(FINDINGS, "overrides.json")
+    if not os.path.exists(path):
+        return 0
+    overrides = json.load(open(path))
+    applied = 0
+    for inc in incidents:
+        patch = overrides.get(inc["id"])
+        if not patch:
+            continue
+        inc.update(patch)
+        inc["corrected_by_greg"] = True
+        applied += 1
+    unknown = set(overrides) - {i["id"] for i in incidents}
+    if unknown:
+        print(f"WARNING: {len(unknown)} override ids match no incident: {sorted(unknown)}")
+    return applied
+
+
 def main():
     ensure_findings_dir()
     gap = TURN_GAP
@@ -160,6 +178,9 @@ def main():
         gap = int(sys.argv[sys.argv.index("--gap") + 1])
 
     confirmed = load_confirmed()
+    applied = apply_overrides(confirmed)
+    if applied:
+        print(f"applied {applied} of the user's corrections")
 
     if "--sensitivity" in sys.argv:
         print("gap  distinct  bad_assumption  repeats_lost")

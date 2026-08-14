@@ -72,8 +72,16 @@ def incident_html(inc, index):
     if occurrences > 1:
         flags.insert(
             0,
-            f'<span class="pill quiet">{occurrences} turns, one episode</span>',
+            f'<span class="pill quiet">{occurrences} write-ups, one moment</span>',
         )
+    if inc.get("corrected_by_greg"):
+        flags.insert(0, '<span class="pill greg">Corrected by the user</span>')
+
+    greg_note = (
+        f'<div class="greg-note"><b>the user\'s correction</b>{esc(inc["greg_note"])}</div>'
+        if inc.get("greg_note")
+        else ""
+    )
 
     also = "".join(
         f'<blockquote class="said also">{esc(q)}</blockquote>'
@@ -94,6 +102,7 @@ def incident_html(inc, index):
           <dt>the user wanted</dt><dd>{esc(inc.get('what_greg_wanted'))}</dd>
           <dt>Rule candidate</dt><dd class="rule">{esc(inc.get('rule_candidate')) or '<em>none — not rule-fixable</em>'}</dd>
         </dl>
+        {greg_note}
       </article>"""
 
 

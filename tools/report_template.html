@@ -89,6 +89,16 @@
   }
   .pill.flag { background: var(--flag-soft); color: var(--flag); }
   .pill.quiet { background: var(--surface-2); color: var(--muted); }
+  .pill.greg { background: var(--warn-soft); color: var(--warn); }
+  .greg-note {
+    background: var(--warn-soft); border-left: 2px solid var(--warn);
+    padding: 0.7rem 1rem; font-size: 0.9rem; color: var(--ink-2);
+  }
+  .greg-note b {
+    display: block; font-family: var(--mono); font-size: 0.64rem;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--warn); margin-bottom: 0.3rem;
+  }
 
   /* ---- pattern accordions ---- */
   .pats { display: flex; flex-direction: column; gap: 0.6rem; }
@@ -280,7 +290,7 @@
         come first, then descending severity. Severity is derived only from era-stable signals:
         how long the user sat through before objecting, how much work rested on the mistake, whether
         the thread was abandoned, whether it had already been said. Where one argument spans several
-        messages they are merged and tagged <em>“N turns, one episode”</em>, with the follow-on
+        messages they are merged and tagged <em>“N write-ups, one moment”</em>, with the other
         quotes shown underneath the first.
       </p>
     </div>
@@ -459,16 +469,24 @@
         would have buried everything earlier and most of the chat corpus.
       </p>
       <p>
-        <strong>One argument is one episode.</strong> the user, reading the first draft: <em>“quite a
-        few of the findings seem to actually be duplicates of each other.”</em> They were. The
-        finders flag every message that looks like pushback, so a single argument — he objects,
-        Claude answers badly, he objects again — produced several confirmed incidents, inflating
-        exactly the patterns he pushed hardest on. Incidents sharing a session and a kind within
-        12 turns, or quoting the same words, are now merged: {{RAW}} confirmed incidents collapse
-        to {{CONFIRMED}} episodes. The merge keeps the worst member, never the last, because
-        losing a repeat flag would silently drop a pattern below the rule bar. There is no natural
-        break in the threshold curve — 12 turns is a judgment call, and
-        <code>dedupe_incidents.py --sensitivity</code> shows what other choices would give.
+        <strong>Only a shared quote proves a duplicate.</strong> the user, on the first draft:
+        <em>“quite a few of the findings seem to actually be duplicates of each other.”</em> True —
+        the judges sometimes wrote up one message twice, and resuming a session replays earlier
+        messages into a second transcript. The first fix also merged incidents that merely sat
+        close together in one session under the same label, on the theory that they were one
+        argument. The user killed that theory by reading one: a diagram misreading merged with an
+        inaccessible-file-path complaint four turns later. Measuring the semantic similarity
+        inside every proximity merge confirmed it — <strong>12 of 16 scored between 0.01 and
+        0.11</strong>. Proximity means two things went wrong near each other, not that one thing
+        went wrong. Merging is now on identical quote alone: {{RAW}} confirmed incidents collapse
+        to {{CONFIRMED}}, and the merge keeps the worst member so a repeat flag can never be lost
+        to merge order.
+      </p>
+      <p>
+        <strong>The user's rulings outrank the judges'.</strong> The judges are a rubric applied by a
+        model; the user is the person the rules are for. Where they have corrected a finding it is marked
+        <em>Corrected by the user</em>, their wording replaces theirs, and it survives a re-run via
+        <code>findings/overrides.json</code>.
       </p>
       <p>
         <strong>Coverage is complete, but four stages needed repair.</strong> The triage model
