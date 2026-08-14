@@ -1,0 +1,525 @@
+<title>Correction Record</title>
+<style>
+  :root {
+    --ground: #eceef1; --surface: #ffffff; --surface-2: #f5f6f8;
+    --ink: #1a1d23; --ink-2: #3d434e; --muted: #656c79;
+    --rule: #d5d9df; --rule-strong: #b6bcc6;
+    --accent: #2c5f66; --accent-soft: #dbe8e9;
+    --flag: #9c4a2f; --flag-soft: #f2e0d9;
+    --warn: #8a6a1f; --warn-soft: #f0e7d2;
+    --bar-a: #2c5f66; --bar-b: #a9b3bd;
+    --serif: "Iowan Old Style", Charter, Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #131519; --surface: #1b1e24; --surface-2: #212530;
+      --ink: #e4e7ec; --ink-2: #b9bfca; --muted: #8d95a3;
+      --rule: #2e333c; --rule-strong: #414855;
+      --accent: #79b6bc; --accent-soft: #1d3236;
+      --flag: #dd8a6c; --flag-soft: #37231c;
+      --warn: #cfa94e; --warn-soft: #302713;
+      --bar-a: #79b6bc; --bar-b: #4a525e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #131519; --surface: #1b1e24; --surface-2: #212530;
+    --ink: #e4e7ec; --ink-2: #b9bfca; --muted: #8d95a3;
+    --rule: #2e333c; --rule-strong: #414855;
+    --accent: #79b6bc; --accent-soft: #1d3236;
+    --flag: #dd8a6c; --flag-soft: #37231c;
+    --warn: #cfa94e; --warn-soft: #302713;
+    --bar-a: #79b6bc; --bar-b: #4a525e;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 68rem; margin: 0 auto; padding: 3rem 1.5rem 6rem;
+    display: flex; flex-direction: column; gap: 3.5rem;
+  }
+  .prose { max-width: 40rem; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); line-height: 1.05; letter-spacing: -0.015em; }
+  h2 { font-size: 1.75rem; line-height: 1.2; }
+  h3 { font-size: 1.15rem; line-height: 1.3; }
+  p { margin: 0 0 1rem; } p:last-child { margin-bottom: 0; }
+  a { color: var(--accent); }
+  code { font-family: var(--mono); font-size: 0.87em; }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.11em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .standfirst { font-size: 1.12rem; color: var(--ink-2); max-width: 42rem; }
+  header { display: flex; flex-direction: column; gap: 1.1rem; }
+
+  .funnel {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+    border-radius: 3px; overflow: hidden;
+  }
+  .funnel div { background: var(--surface); padding: 1rem 1.1rem; }
+  .funnel .n {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 1.9rem; line-height: 1.1;
+  }
+  .funnel .k {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin-top: 0.35rem;
+  }
+  .funnel div:last-child .n { color: var(--accent); }
+
+  section { display: flex; flex-direction: column; gap: 1.4rem; }
+  .sechead {
+    display: flex; flex-direction: column; gap: 0.5rem;
+    border-top: 2px solid var(--ink); padding-top: 0.9rem;
+  }
+  .note { font-size: 0.88rem; color: var(--muted); }
+
+  .pill {
+    font-family: var(--mono); font-size: 0.64rem; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 0.22rem 0.5rem; border-radius: 2px;
+    background: var(--accent-soft); color: var(--accent); white-space: nowrap;
+  }
+  .pill.flag { background: var(--flag-soft); color: var(--flag); }
+  .pill.quiet { background: var(--surface-2); color: var(--muted); }
+
+  /* ---- pattern accordions ---- */
+  .pats { display: flex; flex-direction: column; gap: 0.6rem; }
+  .pat {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-left: 3px solid var(--rule-strong); border-radius: 3px;
+  }
+  .pat.barred { border-left-color: var(--accent); }
+  .pat > summary {
+    cursor: pointer; padding: 0.95rem 1.2rem; display: flex; flex-wrap: wrap;
+    align-items: baseline; gap: 0.5rem 1rem; list-style: none;
+  }
+  .pat > summary::-webkit-details-marker { display: none; }
+  .pat > summary::before {
+    content: "▸"; color: var(--muted); font-size: 0.8rem;
+    transform: translateY(-1px);
+  }
+  .pat[open] > summary::before { content: "▾"; }
+  .pat > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .pat-kind { font-family: var(--mono); font-size: 1rem; color: var(--ink); }
+  .pat-class { font-size: 0.85rem; color: var(--muted); }
+  .pat-nums {
+    font-size: 0.82rem; color: var(--muted); margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  .pat-nums b { font-family: var(--mono); font-weight: 500; color: var(--ink-2); }
+  .pat-nums b.hot { color: var(--flag); }
+  .pat-body {
+    border-top: 1px solid var(--rule); padding: 0.5rem 1.2rem 1.2rem;
+    display: flex; flex-direction: column;
+  }
+
+  /* ---- individual incidents ---- */
+  .inc { border-bottom: 1px solid var(--rule); padding: 1.15rem 0; display: flex; flex-direction: column; gap: 0.7rem; }
+  .inc:last-child { border-bottom: none; padding-bottom: 0.2rem; }
+  .inc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; }
+  .idx {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 0.75rem; color: var(--muted);
+    border: 1px solid var(--rule); border-radius: 2px;
+    padding: 0.05rem 0.4rem; min-width: 2rem; text-align: center;
+  }
+  .inc-meta {
+    display: flex; flex-wrap: wrap; gap: 0.8rem;
+    font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+  }
+  .inc-meta .proj { color: var(--ink-2); }
+  .inc-flags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-left: auto; }
+  .sev { font-variant-numeric: tabular-nums; }
+  .sev.high { color: var(--flag); }
+  .sev.mid { color: var(--warn); }
+
+  .said {
+    margin: 0; padding: 0.7rem 1rem; background: var(--surface-2);
+    border-left: 2px solid var(--rule-strong);
+    font-family: var(--serif); font-style: italic; font-size: 1rem; color: var(--ink);
+  }
+  .inc dl {
+    margin: 0; display: grid; grid-template-columns: 8.5rem 1fr;
+    gap: 0.35rem 1rem; font-size: 0.92rem;
+  }
+  .inc dt {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--muted); padding-top: 0.22rem;
+  }
+  .inc dd { margin: 0; color: var(--ink-2); }
+  .inc dd.rule { color: var(--ink); }
+  @media (max-width: 34rem) {
+    .inc dl { grid-template-columns: 1fr; gap: 0.15rem; }
+    .inc dt { padding-top: 0.5rem; }
+  }
+
+  /* ---- filters ---- */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 3px; padding: 0.7rem 0.9rem;
+  }
+  .filters span {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--muted); margin-right: 0.3rem;
+  }
+  .filters button {
+    font-family: var(--mono); font-size: 0.72rem; cursor: pointer;
+    background: var(--surface-2); color: var(--ink-2);
+    border: 1px solid var(--rule); border-radius: 2px; padding: 0.3rem 0.6rem;
+  }
+  .filters button[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent); color: var(--surface);
+  }
+  .filters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .inc[hidden] { display: none; }
+
+  /* ---- panels & callouts ---- */
+  .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); gap: 1rem; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 1.3rem 1.4rem; display: flex; flex-direction: column; gap: 1rem;
+  }
+  .chart { display: flex; flex-direction: column; gap: 0.75rem; }
+  .row { display: flex; flex-direction: column; gap: 0.3rem; }
+  .rowhead { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; color: var(--ink-2); }
+  .rowhead b { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 500; color: var(--ink); }
+  .track { height: 0.55rem; background: var(--surface-2); border-radius: 1px; overflow: hidden; }
+  .fill { height: 100%; background: var(--bar-b); }
+  .fill.me { background: var(--bar-a); }
+  .fill.bad { background: var(--flag); }
+
+  .callout {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--flag); border-radius: 3px; padding: 1.3rem 1.5rem;
+  }
+  .callout.warn { border-top-color: var(--warn); }
+  .callout h3 { margin-bottom: 0.6rem; }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th {
+    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--surface-2);
+  }
+  td.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td.kindcell { font-family: var(--mono); font-size: 0.85rem; }
+  tr:last-child td { border-bottom: none; }
+
+  footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--rule); padding-top: 1.4rem; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Claude Code · 2026-07-08 → 08-14 &nbsp;·&nbsp; claude.ai · 2025-12 → 2026-08</div>
+    <h1>Correction Record</h1>
+    <p class="standfirst">
+      Every place the user pushed back on Claude, swept from 95 local session transcripts and 60
+      exported chats, then confirmed one at a time. All {{CONFIRMED}} confirmed incidents are
+      listed in full below — a kind name is not enough to decide whether a pattern is worth
+      fixing.
+    </p>
+    <div class="funnel">
+      <div><div class="n">2,190</div><div class="k">Messages the user wrote</div></div>
+      <div><div class="n">1,080</div><div class="k">Candidate windows</div></div>
+      <div><div class="n">325</div><div class="k">Triaged corrections</div></div>
+      <div><div class="n">{{CONFIRMED}}</div><div class="k">Confirmed</div></div>
+      <div><div class="n">{{BAR}}</div><div class="k">Clear the bar</div></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sechead">
+      <h2>Read this before the counts</h2>
+    </div>
+    <div class="callout warn">
+      <h3>Silence is not absence — these counts are a floor</h3>
+      <p>
+        Every number here comes from a moment the user <em>said something</em>. In their words:
+        <em>“I dont always share my feedback, and so there are times i may consider these worse
+        than this report identifies.”</em> Four patterns were named as undercounted:
+        <code>incomplete</code>, <code>wrong_approach</code>, <code>inefficient_process</code>,
+        and <code>lost_context</code>.
+      </p>
+      <p>
+        That is a structural bias, not a guess. A method built on corrections can only see
+        failures whose natural response is <strong>pushback</strong>. Failures whose natural
+        response is <strong>silent accommodation</strong> — restating a fact Claude already
+        forgot, waiting out a flailing retry loop, quietly finishing the half of the task Claude
+        skipped — leave no trace in the corpus at all. <code>lost_context</code> shows 5
+        incidents here; the honest reading is that 5 is how often it annoyed the user enough to
+        mention, not how often it happened.
+      </p>
+      <p>
+        The two findings in this report that do <em>not</em> depend on the user speaking up — the
+        commit-length gap and the comment-replacement shrink — are both worse than anything the
+        correction data surfaced. That is the pattern to expect.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead">
+      <h2>Every confirmed incident</h2>
+      <p class="prose note">
+        {{CONFIRMED}} incidents in {{PATTERNS}} patterns, ordered by incidents × median severity.
+        Bar-clearing patterns are expanded; the rest are collapsed. Within each pattern, repeats
+        come first, then descending severity. Severity is derived only from era-stable signals:
+        how long the user sat through before objecting, how much work rested on the mistake, whether
+        the thread was abandoned, whether it had already been said.
+      </p>
+    </div>
+
+    <div class="filters">
+      <span>Filter</span>
+      <button type="button" data-filter="all" aria-pressed="true">All {{CONFIRMED}}</button>
+      <button type="button" data-filter="repeat" aria-pressed="false">Repeats only ({{REPEATS}})</button>
+      <button type="button" data-filter="sev" aria-pressed="false">Severity ≥ 3.5</button>
+      <button type="button" data-filter="A" aria-pressed="false">Class A — what Claude did</button>
+      <button type="button" data-filter="B" aria-pressed="false">Class B — what Claude wrote</button>
+      <button type="button" data-expand="open">Expand all</button>
+      <button type="button" data-expand="close">Collapse all</button>
+    </div>
+
+    <div class="pats">
+      <!--INCIDENTS-->
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead">
+      <h2>Measured, not judged</h2>
+      <p class="prose note">
+        These two needed no complaint from the user and no model's opinion. They are counts over
+        artifacts that already exist, and they hold across the whole window.
+      </p>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <h3>Commit message length</h3>
+        <p class="note">Median body characters, same repos, same window.</p>
+        <div class="chart">
+          <div class="row">
+            <div class="rowhead"><span>Claude co-authored &nbsp;<small>n=140</small></span><b>{{CLAUDE_CHARS}}</b></div>
+            <div class="track"><div class="fill bad" style="width:100%"></div></div>
+          </div>
+          <div class="row">
+            <div class="rowhead"><span>User, hand-written &nbsp;<small>n=42</small></span><b>{{USER_CHARS}}</b></div>
+            <div class="track"><div class="fill me" style="width:26%"></div></div>
+          </div>
+          <div class="row">
+            <div class="rowhead"><span>Everyone else &nbsp;<small>n=1,284</small></span><b>0</b></div>
+            <div class="track"><div class="fill" style="width:1%"></div></div>
+          </div>
+        </div>
+        <p class="note">
+          <strong>{{RATIO}}× longer than the user writes them themselves</strong>, 19 lines against their
+          5. The body is left empty 31% of the time; Claude does 2%.
+        </p>
+      </div>
+      <div class="panel">
+        <h3>Comments Claude replaced</h3>
+        <p class="note">
+          {{SHRINKS}} cases where Claude wrote a comment, then replaced it with a shorter one
+          covering the same ground. Median words.
+        </p>
+        <div class="chart">
+          <div class="row">
+            <div class="rowhead"><span>What Claude wrote first</span><b>26</b></div>
+            <div class="track"><div class="fill bad" style="width:100%"></div></div>
+          </div>
+          <div class="row">
+            <div class="rowhead"><span>What replaced it</span><b>8</b></div>
+            <div class="track"><div class="fill me" style="width:31%"></div></div>
+          </div>
+        </div>
+        <p class="note">
+          Revisited comments lost <strong>45% of their characters</strong>. These are the only
+          comments with ground truth about length — and the judging rubric called 24 of the 29
+          bloated originals <strong>“good”</strong>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead"><h2>What this says to build</h2></div>
+
+    <div class="callout">
+      <h3>The comment measurement was wrong, and the user caught it</h3>
+      <p>
+        An earlier draft reported a 15.6% comment fail rate and concluded the comment hook should
+        not ship. The user's response: <em>“I have re-worded your overly verbose comments many
+        times.”</em> The number does not survive that, for three compounding reasons.
+      </p>
+      <p>
+        <strong>The corpus double-counts corrections.</strong> It is built from Claude's own
+        <code>Edit</code> and <code>Write</code> calls, so a bloated comment and its fix are both
+        in it, and every fix scores as a fresh good comment.
+        <strong>The rubric could not see verbosity</strong> — it asks what-vs-why and
+        unstated-premise, never “is this three times longer than it needs to be”.
+        <strong>Editor-side rewording is invisible</strong> — a transcript sweep only sees edits
+        that passed through a tool call.
+      </p>
+      <p>
+        Corrected position: comment verbosity is real and repeated, and
+        <code>what_not_why</code> alone will not catch it. Whether enforcement is a rule or a
+        hook is still open — but “do not ship it” was the wrong call.
+      </p>
+    </div>
+
+    <div class="callout">
+      <h3>Nothing came back hook-shaped, and that may be the judges' fault</h3>
+      <p>
+        Of {{CONFIRMED}} confirmed findings the judges marked 163 fixable by a rule and only 3 by
+        a hook. Either these failures genuinely are rule-shaped, or the judges took the cheaper
+        answer. This data cannot separate those, and the same rubric family just proved fallible
+        on comments.
+      </p>
+    </div>
+
+    <div class="callout">
+      <h3>The strongest lead was found before the sweep ran</h3>
+      <p>
+        The existing <code>writing-style</code> skill ends its description with “Do NOT use for code,
+        <strong>commit messages</strong>, or internal notes” — and it is manually invoked, so
+        nothing fires it when Claude writes a commit message mid-task. The {{RATIO}}× length gap
+        is what that looks like in the data. The rules may be fine; nothing triggers them.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead">
+      <h2>Closing the silence gap</h2>
+      <p class="prose note">
+        Detectors that need no complaint from the user. Each is countable from transcripts already
+        on disk, and each targets one of the four patterns flagged as undercounted.
+      </p>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Target</th><th>Signal, with no complaint required</th><th>Countable?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="kindcell">lost_context</td>
+            <td>Claude asks for a fact that already appears in an earlier message in the same session</td>
+            <td>Yes — string and semantic match against prior turns</td>
+          </tr>
+          <tr>
+            <td class="kindcell">inefficient_process</td>
+            <td>The same command re-run after failing; runs of consecutive failed tool calls</td>
+            <td>Yes — exit codes and command text are in the transcript</td>
+          </tr>
+          <tr>
+            <td class="kindcell">incomplete</td>
+            <td>Claude reports done while a test failed, a TODO was left, or a listed subtask never ran</td>
+            <td>Yes — completion language against tool results in the same turn</td>
+          </tr>
+          <tr>
+            <td class="kindcell">wrong_approach</td>
+            <td>Code written and then deleted or reverted inside the same session</td>
+            <td>Partly — proxy only; some rework is legitimate iteration</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead"><h2>Method, and where it is thin</h2></div>
+    <div class="prose">
+      <p>
+        <strong>Finders cast wide, judging cut hard.</strong> Structural signals — a short message
+        right after a long assistant turn, a negation-leading message, profanity — surfaced 1,080
+        candidates from 2,190 of the user's messages. Triage kept 325. A second pass read the full
+        surrounding conversation and confirmed {{CONFIRMED}}, killing the rest for pointing at a
+        vendor, a tool, or the user themselves rather than at Claude.
+      </p>
+      <p>
+        <strong>Profanity finds, it does not rank.</strong> the user's swearing rate quadrupled on
+        2026-07-20 and is four times higher in Claude Code than in chat. Weighting severity on it
+        would have buried everything earlier and most of the chat corpus.
+      </p>
+      <p>
+        <strong>Coverage is complete, but three stages needed repair.</strong> The triage model
+        silently dropped 19 of 1,080 items while reporting full counts; the judges dropped 2 of
+        325. Both were backfilled by hand. The comment extractor first emitted one item per
+        comment <em>line</em>, which would have length-weighted the fail rate — 2,546 fragments
+        were regrouped into 852 blocks and re-judged.
+      </p>
+      <p>
+        <strong>A judged rate is only as good as its rubric.</strong> The comment pass is the
+        proof: a clean-looking 15.6% collapsed the moment it met comments Claude had itself
+        replaced. Any number here resting on a model's opinion carries that risk.
+      </p>
+      <p>
+        <strong>What this cannot see.</strong> Everything the user absorbed without saying so.
+        Failures inside subagent transcripts, excluded. Repos with a separate upstream remote,
+        excluded because the user curated those themselves. And of 852 authored comment blocks only 384
+        could be checked against a live working tree; the rest live in worktrees since deleted.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    Pipeline in <code>tools/</code>, re-runnable against
+    future history; this page is generated by <code>build_report.py</code>. Evidence stays local —
+    <code>findings/</code> is gitignored from the first commit. Corpus: 95 Claude Code transcripts
+    and 60 exported chats; 233 authored commit and PR bodies; 1,785 landed commits; 68 pull
+    requests; 852 code comments.
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var incs = Array.prototype.slice.call(document.querySelectorAll(".inc"));
+    var pats = Array.prototype.slice.call(document.querySelectorAll(".pat"));
+    var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-filter]"));
+
+    function apply(mode) {
+      incs.forEach(function (el) {
+        var show =
+          mode === "all" ||
+          (mode === "repeat" && el.dataset.repeat === "true") ||
+          (mode === "sev" && parseFloat(el.dataset.sev) >= 3.5) ||
+          (mode === "A" && el.dataset.class.charAt(0) === "A") ||
+          (mode === "B" && el.dataset.class === "B");
+        el.hidden = !show;
+      });
+      pats.forEach(function (p) {
+        var visible = p.querySelectorAll(".inc:not([hidden])").length;
+        p.style.display = visible ? "" : "none";
+        if (mode !== "all" && visible) p.open = true;
+      });
+      buttons.forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b.dataset.filter === mode));
+      });
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () { apply(b.dataset.filter); });
+    });
+
+    document.querySelectorAll("[data-expand]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var open = b.dataset.expand === "open";
+        pats.forEach(function (p) { if (p.style.display !== "none") p.open = open; });
+      });
+    });
+  })();
+</script>
