@@ -108,6 +108,18 @@ def main():
             }
         )
 
+    # The triage model silently drops items from long batches even while
+    # reporting a full count, so trust the join, not the agent's self-report.
+    missing = [cid for cid in cands if cid not in seen_ids]
+    if missing:
+        compact_path = os.path.join(FINDINGS, "triage_in")
+        lookup = {}
+        for name in sorted(os.listdir(compact_path)):
+            for item in json.load(open(os.path.join(compact_path, name))):
+                lookup[item["id"]] = item
+        with open(os.path.join(FINDINGS, "triage_missing.json"), "w") as fh:
+            json.dump([lookup[m] for m in missing if m in lookup], fh, indent=1)
+
     coverage = len(seen_ids) / max(1, len(cands))
     keep = [
         m

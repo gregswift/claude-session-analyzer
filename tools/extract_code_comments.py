@@ -75,25 +75,42 @@ def added_lines(payload, name):
 
 
 def harvest(lines, token, all_lines):
-    """Yield (comment_text, following_code) for each added comment line."""
+    """Yield (comment_block, following_code) for each added comment.
+
+    A comment is a *block*: consecutive comment lines in the file are one unit.
+    Judging them line by line asks whether a sentence fragment explains why,
+    which is not a question with an answer."""
+    added = set(lines)
     out = []
-    index = {l: i for i, l in enumerate(all_lines)}
-    for line in lines:
+    i = 0
+    while i < len(all_lines):
+        line = all_lines[i]
         stripped = line.strip()
-        if not stripped.startswith(token):
+        if not stripped.startswith(token) or line not in added:
+            i += 1
             continue
-        if SKIP_PATTERNS.match(stripped):
+
+        block = []
+        start = i
+        while i < len(all_lines):
+            cur = all_lines[i].strip()
+            if not cur.startswith(token):
+                break
+            block.append(cur[len(token) :].strip())
+            i += 1
+
+        # A block counts as Claude's only if Claude added part of it.
+        if not any(all_lines[j] in added for j in range(start, i)):
             continue
-        body = stripped[len(token) :].strip()
+        if any(SKIP_PATTERNS.match(all_lines[j].strip()) for j in range(start, i)):
+            continue
+
+        body = "\n".join(b for b in block if b).strip()
         if len(body) < 12:
             continue
-        pos = index.get(line)
-        following = []
-        if pos is not None:
-            for nxt in all_lines[pos + 1 : pos + 1 + CONTEXT]:
-                if nxt.strip().startswith(token):
-                    break
-                following.append(nxt)
+        following = [
+            nxt for nxt in all_lines[i : i + CONTEXT] if not nxt.strip().startswith(token)
+        ]
         out.append((body, "\n".join(following).strip()))
     return out
 
