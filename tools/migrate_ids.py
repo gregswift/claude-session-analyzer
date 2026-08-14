@@ -31,7 +31,8 @@ OLD_SOURCES = [
 ]
 
 # Files keyed by incident id. Rulings first - those are the ones that matter.
-ID_KEYED_OBJECTS = ["overrides.json", "greg_review.json"]
+# Old name kept so a findings dir written before the rename still migrates.
+ID_KEYED_OBJECTS = ["overrides.json", "user_review.json", "greg_review.json"]
 ID_KEYED_ARRAYS = ["repeat_judged.json", "reclassify_out.json"]
 ID_KEYED_DIRS = ["triage_out", "judge_out"]
 

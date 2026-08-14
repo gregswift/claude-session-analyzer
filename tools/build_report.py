@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import CONFIG, HOME, FINDINGS  # noqa: E402
+from common import CONFIG, HOME, FINDINGS, field  # noqa: E402
 
 # Claude encodes a project path as its slashes-to-dashes form. Drop the part
 # that is just the user's home directory, plus anything else the config names.
@@ -86,12 +86,13 @@ def incident_html(inc, index):
             0,
             f'<span class="pill quiet">{occurrences} write-ups, one moment</span>',
         )
-    if inc.get("corrected_by_greg"):
-        flags.insert(0, '<span class="pill greg">Corrected by the user</span>')
+    if field(inc, "corrected_by_user", "corrected_by_greg"):
+        flags.insert(0, '<span class="pill user">Corrected by user</span>')
 
-    greg_note = (
-        f'<div class="greg-note"><b>the user\'s correction</b>{esc(inc["greg_note"])}</div>'
-        if inc.get("greg_note")
+    note = field(inc, "user_note", "greg_note")
+    user_note = (
+        f'<div class="user-note"><b>User correction</b>{esc(note)}</div>'
+        if note
         else ""
     )
 
@@ -111,10 +112,10 @@ def incident_html(inc, index):
         {also}
         <dl>
           <dt>Claude did</dt><dd>{esc(inc.get('what_claude_did'))}</dd>
-          <dt>the user wanted</dt><dd>{esc(inc.get('what_greg_wanted'))}</dd>
+          <dt>User wanted</dt><dd>{esc(field(inc, 'what_user_wanted', 'what_greg_wanted'))}</dd>
           <dt>Rule candidate</dt><dd class="rule">{esc(inc.get('rule_candidate')) or '<em>none — not rule-fixable</em>'}</dd>
         </dl>
-        {greg_note}
+        {user_note}
       </article>"""
 
 

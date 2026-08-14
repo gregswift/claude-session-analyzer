@@ -27,6 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (  # noqa: E402
     FINDINGS,
     ensure_findings_dir,
+    findings_path,
     says_repeat,
     write_jsonl,
 )
@@ -257,7 +258,7 @@ def apply_kind_merges(incidents):
     return n
 
 
-def apply_greg_review(incidents):
+def apply_user_review(incidents):
     """The user's own classification of episodes they read, in their own words.
 
     Applied after the model reclassification and beating it. They are the person the
@@ -265,7 +266,7 @@ def apply_greg_review(incidents):
     without them commenting, and which ones they have already told Claude about and
     still need an enforced gate rather than another rule.
     """
-    path = os.path.join(FINDINGS, "greg_review.json")
+    path = findings_path("user_review.json", "greg_review.json")
     if not os.path.exists(path):
         return 0
     review = {k: v for k, v in json.load(open(path)).items() if not k.startswith("_")}
@@ -277,7 +278,7 @@ def apply_greg_review(incidents):
         if patch.get("kind") and patch["kind"] != inc["kind"]:
             inc["kind_was"] = inc["kind"]
         inc.update(patch)
-        inc["corrected_by_greg"] = True
+        inc["corrected_by_user"] = True
         applied += 1
     unknown = set(review) - {i["id"] for i in incidents}
     if unknown:
@@ -308,8 +309,8 @@ def apply_overrides(incidents):
         if not patch.get("_standalone"):
             continue
         row = {k: v for k, v in patch.items() if k != "_standalone"}
-        row.update({"id": key, "confirmed": True, "corrected_by_greg": True,
-                    "merged_ids": [key], "source": "greg", "confidence": 1.0})
+        row.update({"id": key, "confirmed": True, "corrected_by_user": True,
+                    "merged_ids": [key], "source": "user", "confidence": 1.0})
         row.setdefault("occurrences", 1)
         incidents.append(row)
         applied += 1
@@ -319,7 +320,7 @@ def apply_overrides(incidents):
         if not patch or patch.get("_standalone"):
             continue
         inc.update(patch)
-        inc["corrected_by_greg"] = True
+        inc["corrected_by_user"] = True
         applied += 1
 
     unknown = {
@@ -362,7 +363,7 @@ def main():
     split = apply_reclassification(merged)
     if split:
         print(f"reclassified {split} episodes into the user's sub-kinds")
-    reviewed = apply_greg_review(merged)
+    reviewed = apply_user_review(merged)
     fused = apply_kind_merges(merged)
     if fused:
         print(f"merged {fused} episodes into unified kinds")

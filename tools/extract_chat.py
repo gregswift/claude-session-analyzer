@@ -17,7 +17,9 @@ from common import (  # noqa: E402
     CORRECTION_PHRASE,
     NEGATION_LEAD,
     PROFANITY,
+    USER_ROLE,
     ensure_findings_dir,
+    is_user_turn,
     write_jsonl,
 )
 
@@ -69,7 +71,7 @@ def main():
         stats["conversations"] += 1
         turns = [
             {
-                "role": "greg" if m.get("sender") == "human" else "claude",
+                "role": USER_ROLE if m.get("sender") == "human" else "claude",
                 "text": message_text(m)[:CLIP],
                 "full_len": len(message_text(m)),
                 "ts": m.get("created_at"),
@@ -79,12 +81,12 @@ def main():
         ]
 
         for i, turn in enumerate(turns):
-            if turn["role"] != "greg":
+            if not is_user_turn(turn):
                 continue
             stats["human_msgs"] += 1
             out_size = 0
             for prev in reversed(turns[:i]):
-                if prev["role"] == "greg":
+                if is_user_turn(prev):
                     break
                 out_size += prev["full_len"]
             flags = flags_for(turn["text"], out_size)
@@ -93,8 +95,8 @@ def main():
             stats["flagged"] += 1
 
             following = turns[i + 1 :]
-            next_greg = next(
-                (j for j, t in enumerate(following) if t["role"] == "greg"), None
+            next_user = next(
+                (j for j, t in enumerate(following) if is_user_turn(t)), None
             )
             candidates.append(
                 {
@@ -108,8 +110,8 @@ def main():
                     "prompt": turn["text"][:4000],
                     "preceding_output_chars": out_size,
                     "preceding_tool_calls": 0,
-                    "turns_before_next_prompt": next_greg,
-                    "thread_ended_here": next_greg is None,
+                    "turns_before_next_prompt": next_user,
+                    "thread_ended_here": next_user is None,
                     "window": turns[max(0, i - BACK) : i + FORWARD + 1],
                 }
             )

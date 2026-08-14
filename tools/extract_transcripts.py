@@ -19,7 +19,9 @@ from common import (  # noqa: E402
     CORRECTION_PHRASE,
     NEGATION_LEAD,
     PROFANITY,
+    USER_ROLE,
     ensure_findings_dir,
+    is_user_turn,
     is_real_prompt,
     iter_transcripts,
     read_jsonl,
@@ -46,7 +48,7 @@ def summarize_turns(entries):
         if kind == "user" and is_real_prompt(entry):
             turns.append(
                 {
-                    "role": "greg",
+                    "role": USER_ROLE,
                     "text": text_of((entry.get("message") or {}).get("content")),
                     "ts": entry.get("timestamp"),
                     "uuid": entry.get("uuid"),
@@ -76,7 +78,7 @@ def preceding_output_size(turns, index):
     total = 0
     calls = 0
     for turn in reversed(turns[:index]):
-        if turn["role"] == "greg":
+        if is_user_turn(turn):
             break
         total += turn.get("full_len", len(turn.get("text", "")))
         for call in turn.get("calls", []):
@@ -89,7 +91,7 @@ def turns_to_next_prompt(turns, index):
     """How many Claude turns the user sat through before speaking again."""
     count = 0
     for turn in turns[index + 1 :]:
-        if turn["role"] == "greg":
+        if is_user_turn(turn):
             return count
         count += 1
     return None  # thread ended here - possible abandonment
@@ -127,7 +129,7 @@ def main():
         session = os.path.basename(path)[:-6]
 
         for i, turn in enumerate(turns):
-            if turn["role"] != "greg":
+            if not is_user_turn(turn):
                 continue
             stats["prompts"] += 1
             out_size, out_calls = preceding_output_size(turns, i)

@@ -307,6 +307,44 @@ def strip_trailers(text):
     return "\n".join(kept).strip()
 
 
+# --- compatibility with findings written before the user_* rename -------------
+# Earlier versions of this tool named the person it studies after its author:
+# role "greg", greg_said, what_greg_wanted, greg_note, corrected_by_greg, and
+# greg_review.json. Those names are wrong for a tool anyone can run, so
+# everything is WRITTEN as user_*. An existing findings directory is still READ
+# under the old names, and is never rewritten in place.
+
+USER_ROLE = "user"
+LEGACY_USER_ROLES = ("user", "greg")
+
+
+def is_user_turn(turn):
+    """True for a turn the person typed, under either the current or old role."""
+    return turn.get("role") in LEGACY_USER_ROLES
+
+
+def field(obj, name, *legacy, default=None):
+    """Read a field by its current name, accepting names earlier versions wrote."""
+    for key in (name,) + legacy:
+        if key in obj:
+            return obj[key]
+    return default
+
+
+def findings_path(name, *legacy):
+    """Path to a findings file, preferring the current name but falling back to
+    one an earlier version wrote, so old rulings keep loading without migration."""
+    current = os.path.join(FINDINGS, name)
+    if os.path.exists(current):
+        return current
+    for old in legacy:
+        candidate = os.path.join(FINDINGS, old)
+        if os.path.exists(candidate):
+            print(f"  reading legacy {old} (writing {name} from now on)")
+            return candidate
+    return current
+
+
 def ensure_findings_dir():
     os.makedirs(FINDINGS, exist_ok=True)
     return FINDINGS
