@@ -24,7 +24,7 @@ AFTER_CLIP = 500
 
 def last_claude_before(window):
     """The model turn that provoked the prompt: last claude turn before the
-    final greg turn in the window."""
+    final user turn in the window."""
     user_idx = max(
         (i for i, t in enumerate(window) if is_user_turn(t)), default=None
     )
