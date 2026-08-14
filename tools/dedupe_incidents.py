@@ -197,6 +197,34 @@ def apply_reclassification(incidents):
     return applied
 
 
+def apply_greg_review(incidents):
+    """The user's own classification of episodes they read, in their own words.
+
+    Applied after the model reclassification and beating it. They are the person the
+    rules are for, and they can see things the corpus cannot: which failures recur
+    without them commenting, and which ones they have already told Claude about and
+    still need an enforced gate rather than another rule.
+    """
+    path = os.path.join(FINDINGS, "greg_review.json")
+    if not os.path.exists(path):
+        return 0
+    review = {k: v for k, v in json.load(open(path)).items() if not k.startswith("_")}
+    applied = 0
+    for inc in incidents:
+        patch = review.get(inc["id"])
+        if not patch:
+            continue
+        if patch.get("kind") and patch["kind"] != inc["kind"]:
+            inc["kind_was"] = inc["kind"]
+        inc.update(patch)
+        inc["corrected_by_greg"] = True
+        applied += 1
+    unknown = set(review) - {i["id"] for i in incidents}
+    if unknown:
+        print(f"WARNING: {len(unknown)} review ids match no episode: {sorted(unknown)}")
+    return applied
+
+
 def apply_overrides(incidents):
     """Let the user's rulings beat the judges'.
 
@@ -274,6 +302,9 @@ def main():
     split = apply_reclassification(merged)
     if split:
         print(f"reclassified {split} episodes into the user's sub-kinds")
+    reviewed = apply_greg_review(merged)
+    if reviewed:
+        print(f"applied the user's own classification to {reviewed} episodes")
     applied = apply_overrides(merged)
     if applied:
         print(f"applied {applied} of the user's corrections")
