@@ -1,0 +1,121 @@
+"""Extract candidate correction windows from a claude.ai data export.
+
+Same finders as the transcript pass, different container. Chat has no tool calls,
+so the "long output" threshold is measured on prose alone.
+
+Usage: python3 tools/extract_chat.py <path-to-unzipped-export-dir>
+Writes: findings/candidates_chat.jsonl
+"""
+
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from common import (  # noqa: E402
+    CORRECTION_PHRASE,
+    NEGATION_LEAD,
+    PROFANITY,
+    ensure_findings_dir,
+    write_jsonl,
+)
+
+SHORT_PROMPT = 400
+LONG_OUTPUT = 2000
+BACK = 3
+FORWARD = 3
+CLIP = 1800
+
+
+def message_text(msg):
+    text = msg.get("text") or ""
+    if text:
+        return text
+    out = []
+    for block in msg.get("content") or []:
+        if isinstance(block, dict) and block.get("type") == "text":
+            out.append(block.get("text") or "")
+    return "\n".join(out)
+
+
+def flags_for(text, out_size):
+    flags = []
+    if PROFANITY.search(text):
+        flags.append("profanity")
+    if NEGATION_LEAD.search(text):
+        flags.append("negation_lead")
+    if CORRECTION_PHRASE.search(text):
+        flags.append("correction_phrase")
+    if len(text) < SHORT_PROMPT and out_size > LONG_OUTPUT:
+        flags.append("short_after_long")
+    return flags
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit("usage: extract_chat.py <unzipped-export-dir>")
+    export = sys.argv[1]
+    with open(os.path.join(export, "conversations.json")) as fh:
+        convs = json.load(fh)
+
+    candidates = []
+    stats = {"conversations": 0, "human_msgs": 0, "flagged": 0}
+
+    for conv in convs:
+        msgs = conv.get("chat_messages") or []
+        if not msgs:
+            continue
+        stats["conversations"] += 1
+        turns = [
+            {
+                "role": "greg" if m.get("sender") == "human" else "claude",
+                "text": message_text(m)[:CLIP],
+                "full_len": len(message_text(m)),
+                "ts": m.get("created_at"),
+            }
+            for m in msgs
+        ]
+
+        for i, turn in enumerate(turns):
+            if turn["role"] != "greg":
+                continue
+            stats["human_msgs"] += 1
+            out_size = 0
+            for prev in reversed(turns[:i]):
+                if prev["role"] == "greg":
+                    break
+                out_size += prev["full_len"]
+            flags = flags_for(turn["text"], out_size)
+            if not flags:
+                continue
+            stats["flagged"] += 1
+
+            following = turns[i + 1 :]
+            next_greg = next(
+                (j for j, t in enumerate(following) if t["role"] == "greg"), None
+            )
+            candidates.append(
+                {
+                    "id": f"{conv.get('uuid', '?')[:8]}:{i}",
+                    "source": "chat",
+                    "conversation": conv.get("name"),
+                    "ts": turn["ts"],
+                    "flags": flags,
+                    "prompt": turn["text"][:4000],
+                    "preceding_output_chars": out_size,
+                    "preceding_tool_calls": 0,
+                    "turns_before_next_prompt": next_greg,
+                    "thread_ended_here": next_greg is None,
+                    "window": turns[max(0, i - BACK) : i + FORWARD + 1],
+                }
+            )
+
+    out = os.path.join(ensure_findings_dir(), "candidates_chat.jsonl")
+    write_jsonl(out, candidates)
+    print(json.dumps(stats))
+    print(f"wrote {len(candidates)} candidates -> {out}")
+
+
+if __name__ == "__main__":
+    main()
