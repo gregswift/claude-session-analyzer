@@ -233,18 +233,16 @@
 <div class="wrap">
 
   <header>
-    <div class="eyebrow">Claude Code · 2026-07-08 → 08-14 &nbsp;·&nbsp; claude.ai · 2025-12 → 2026-08</div>
+    <div class="eyebrow">{{WINDOW}}</div>
     <h1>Correction Record</h1>
     <p class="standfirst">
-      Every place the user pushed back on Claude, swept from 95 local session transcripts and 60
-      exported chats, confirmed one at a time, then collapsed into distinct episodes. All
-      {{CONFIRMED}} are listed in full below — a kind name is not enough to decide whether a
-      pattern is worth fixing.
+      Every place the user pushed back on Claude, confirmed one at a time, then collapsed into
+      distinct episodes. All {{CONFIRMED}} are listed in full below — a kind name is not enough to
+      decide whether a pattern is worth fixing.
     </p>
     <div class="funnel">
-      <div><div class="n">2,190</div><div class="k">Messages the user wrote</div></div>
-      <div><div class="n">1,080</div><div class="k">Candidate windows</div></div>
-      <div><div class="n">325</div><div class="k">Triaged corrections</div></div>
+      <div><div class="n">{{CANDIDATES}}</div><div class="k">Candidate windows</div></div>
+      <div><div class="n">{{TRIAGED}}</div><div class="k">Sent to judging</div></div>
       <div><div class="n">{{RAW}}</div><div class="k">Confirmed</div></div>
       <div><div class="n">{{CONFIRMED}}</div><div class="k">Distinct episodes</div></div>
       <div><div class="n">{{BAR}}</div><div class="k">Clear the bar</div></div>
@@ -258,25 +256,18 @@
     <div class="callout warn">
       <h3>Silence is not absence — these counts are a floor</h3>
       <p>
-        Every number here comes from a moment the user <em>said something</em>. In their words:
-        <em>“I dont always share my feedback, and so there are times i may consider these worse
-        than this report identifies.”</em> Four patterns were named as undercounted:
-        <code>incomplete</code>, <code>wrong_approach</code>, <code>inefficient_process</code>,
-        and <code>lost_context</code>.
+        Every number here comes from a moment the user <em>said something</em>. That is a
+        structural bias, not a guess. A method built on corrections can only see failures whose
+        natural response is <strong>pushback</strong>. Failures whose natural response is
+        <strong>silent accommodation</strong> — restating a fact Claude already forgot, waiting
+        out a flailing retry loop, quietly finishing the half of the task Claude skipped — leave
+        no trace in the corpus at all.
       </p>
       <p>
-        That is a structural bias, not a guess. A method built on corrections can only see
-        failures whose natural response is <strong>pushback</strong>. Failures whose natural
-        response is <strong>silent accommodation</strong> — restating a fact Claude already
-        forgot, waiting out a flailing retry loop, quietly finishing the half of the task Claude
-        skipped — leave no trace in the corpus at all. <code>lost_context</code> shows 5
-        incidents here; the honest reading is that 5 is how often it annoyed the user enough to
-        mention, not how often it happened.
-      </p>
-      <p>
-        The two findings in this report that do <em>not</em> depend on the user speaking up — the
-        commit-length gap and the comment-replacement shrink — are both worse than anything the
-        correction data surfaced. That is the pattern to expect.
+        An incident count is therefore how often a failure was worth complaining about, not how
+        often it happened. Any pattern whose natural response is silence is undercounted here by
+        construction. The measured signals further down need no complaint to fire, and exist as
+        the check on exactly that.
       </p>
     </div>
   </section>
@@ -288,10 +279,10 @@
         {{CONFIRMED}} episodes in {{PATTERNS}} patterns, ordered by episodes × median severity.
         Bar-clearing patterns are expanded; the rest are collapsed. Within each pattern, repeats
         come first, then descending severity. Severity is derived only from era-stable signals:
-        how long the user sat through before objecting, how much work rested on the mistake, whether
-        the thread was abandoned, whether it had already been said. Where one argument spans several
-        messages they are merged and tagged <em>“N write-ups, one moment”</em>, with the other
-        quotes shown underneath the first.
+        how long the user sat through before objecting, how much work rested on the mistake,
+        whether the thread was abandoned, whether it had already been said. Where one argument
+        spans several messages they are merged and tagged <em>“N write-ups, one moment”</em>, with
+        the other quotes shown underneath the first.
       </p>
     </div>
 
@@ -315,7 +306,7 @@
     <div class="sechead">
       <h2>Measured, not judged</h2>
       <p class="prose note">
-        These two needed no complaint from the user and no model's opinion. They are counts over
+        These need no complaint from the user and no model's opinion. They are counts over
         artifacts that already exist, and they hold across the whole window.
       </p>
     </div>
@@ -325,33 +316,36 @@
         <p class="note">Median body characters, same repos, same window.</p>
         <div class="chart">
           <div class="row">
-            <div class="rowhead"><span>Claude co-authored &nbsp;<small>n=140</small></span><b>{{CLAUDE_CHARS}}</b></div>
-            <div class="track"><div class="fill bad" style="width:100%"></div></div>
+            <div class="rowhead"><span>Claude co-authored &nbsp;<small>n={{CLAUDE_N}}</small></span><b>{{CLAUDE_CHARS}}</b></div>
+            <div class="track"><div class="fill bad" style="width:{{CLAUDE_W}}%"></div></div>
           </div>
           <div class="row">
-            <div class="rowhead"><span>User, hand-written &nbsp;<small>n=42</small></span><b>{{USER_CHARS}}</b></div>
-            <div class="track"><div class="fill me" style="width:26%"></div></div>
+            <div class="rowhead"><span>User, hand-written &nbsp;<small>n={{USER_N}}</small></span><b>{{USER_CHARS}}</b></div>
+            <div class="track"><div class="fill me" style="width:{{USER_W}}%"></div></div>
           </div>
           <div class="row">
-            <div class="rowhead"><span>Everyone else &nbsp;<small>n=1,284</small></span><b>0</b></div>
-            <div class="track"><div class="fill" style="width:1%"></div></div>
+            <div class="rowhead"><span>Everyone else &nbsp;<small>n={{OTHER_N}}</small></span><b>{{OTHER_CHARS}}</b></div>
+            <div class="track"><div class="fill" style="width:{{OTHER_W}}%"></div></div>
           </div>
         </div>
         <p class="note">
-          <strong>{{RATIO}}× longer than the user writes them themselves</strong>, 19 lines against their
-          5. The body is left empty 31% of the time; Claude does 2%.
+          <strong>{{RATIO}}× longer than the user writes them themselves</strong>,
+          {{CLAUDE_LINES}} lines against {{USER_LINES}}. The user leaves the body empty
+          {{USER_EMPTY}} of the time; Claude does {{CLAUDE_EMPTY}}.
         </p>
       </div>
+
       <div class="panel">
         <h3>Where the user hit stop</h3>
         <p class="note">
-          {{INT_N}} interruptions across {{INT_SESSIONS}} sessions. They carry no words
-          to complain with, so they exist exactly where nothing was said.
+          {{INT_N}} interruptions across {{INT_SESSIONS}} sessions. They carry no words to
+          complain with, so they exist exactly where nothing was said — which is what makes them
+          independent of whether the user felt like objecting.
         </p>
         <div class="chart">
           <div class="row">
             <div class="rowhead"><span>Typical stop</span><b>{{INT_MED_S}}s · {{INT_MED_CALLS}} calls</b></div>
-            <div class="track"><div class="fill me" style="width:14%"></div></div>
+            <div class="track"><div class="fill me" style="width:{{INT_MED_W}}%"></div></div>
           </div>
           <div class="row">
             <div class="rowhead"><span>Worst tenth</span><b>{{INT_P90_MIN}}min · {{INT_P90_CALLS}} calls</b></div>
@@ -359,12 +353,9 @@
           </div>
         </div>
         <p class="note">
-          The user's three reasons for stopping: Claude is doing something they do not want;
-          The user is clarifying their own last message; or — <em>“you are running down a path that
-          needs more information or context otherwise its gonna be a lot of wasted work…
-          i have you on automode.”</em> Only the first and third are Claude's failure.
-          <strong>{{INT_OVER3}} stops came after 3+ minutes of work, and {{INT_WRITES}}
-          after files had already been written.</strong>
+          <strong>{{INT_OVER3}} stops came after 3+ minutes of work, and {{INT_WRITES}} after
+          files had already been written.</strong> Work already done when the handle is pulled is
+          work thrown away.
         </p>
       </div>
 
@@ -372,126 +363,26 @@
         <h3>Comments Claude replaced</h3>
         <p class="note">
           {{SHRINKS}} cases where Claude wrote a comment, then replaced it with a shorter one
-          covering the same ground. Median words.
+          covering the same ground. Of {{COMMENT_BLOCKS}} authored comment blocks,
+          {{COMMENT_CHECKED}} could be checked against a live working tree; the rest live in
+          worktrees since deleted.
         </p>
         <div class="chart">
           <div class="row">
-            <div class="rowhead"><span>What Claude wrote first</span><b>26</b></div>
-            <div class="track"><div class="fill bad" style="width:100%"></div></div>
+            <div class="rowhead"><span>Still in the file</span><b>{{COMMENT_SURVIVED}}</b></div>
+            <div class="track"><div class="fill me" style="width:{{COMMENT_SURV_W}}%"></div></div>
           </div>
           <div class="row">
-            <div class="rowhead"><span>What replaced it</span><b>8</b></div>
-            <div class="track"><div class="fill me" style="width:31%"></div></div>
+            <div class="rowhead"><span>Changed or gone</span><b>{{COMMENT_LOST}}</b></div>
+            <div class="track"><div class="fill bad" style="width:{{COMMENT_LOST_W}}%"></div></div>
           </div>
         </div>
         <p class="note">
-          Revisited comments lost <strong>45% of their characters</strong>. These are the only
-          comments with ground truth about length — and the judging rubric called 24 of the 29
-          bloated originals <strong>“good”</strong>.
+          A comment the model rewrote itself, or that did not survive contact with the file, is
+          the only comment evidence with ground truth about length. A judged rate has no such
+          anchor.
         </p>
       </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="sechead"><h2>What this says to build</h2></div>
-
-    <div class="callout">
-      <h3>The comment measurement was wrong, and the user caught it</h3>
-      <p>
-        An earlier draft reported a 15.6% comment fail rate and concluded the comment hook should
-        not ship. The user's response: <em>“I have re-worded your overly verbose comments many
-        times.”</em> The number does not survive that, for three compounding reasons.
-      </p>
-      <p>
-        <strong>The corpus double-counts corrections.</strong> It is built from Claude's own
-        <code>Edit</code> and <code>Write</code> calls, so a bloated comment and its fix are both
-        in it, and every fix scores as a fresh good comment.
-        <strong>The rubric could not see verbosity</strong> — it asks what-vs-why and
-        unstated-premise, never “is this three times longer than it needs to be”.
-        <strong>Editor-side rewording is invisible</strong> — a transcript sweep only sees edits
-        that passed through a tool call.
-      </p>
-      <p>
-        Corrected position: comment verbosity is real and repeated, and
-        <code>what_not_why</code> alone will not catch it. Whether enforcement is a rule or a
-        hook is still open — but “do not ship it” was the wrong call.
-      </p>
-    </div>
-
-    <div class="callout warn">
-      <h3>The most damaging pattern is below the bar</h3>
-      <p>
-        <code>context_leak</code> — internal PR and issue references, private repo paths, and
-        identifying names ending up in text bound for an external audience — has the
-        <strong>highest median severity of any pattern (5.54)</strong>, well above the
-        bar-clearing ones. It sits below the bar only because the user never had to repeat themselves
-        about it. Four episodes, four separate sessions, no repeat.
-      </p>
-      <p>
-        The bar exists to stop rules being written on one-off noise. This is not noise, and it is
-        the one failure here with consequences outside the conversation. Worth deciding on
-        directly rather than letting the threshold decide.
-      </p>
-    </div>
-
-    <div class="callout">
-      <h3>Nothing came back hook-shaped, and that may be the judges' fault</h3>
-      <p>
-        Of {{CONFIRMED}} confirmed findings the judges marked 163 fixable by a rule and only 3 by
-        a hook. Either these failures genuinely are rule-shaped, or the judges took the cheaper
-        answer. This data cannot separate those, and the same rubric family just proved fallible
-        on comments.
-      </p>
-    </div>
-
-    <div class="callout">
-      <h3>The strongest lead was found before the sweep ran</h3>
-      <p>
-        The existing <code>writing-style</code> skill ends its description with “Do NOT use for code,
-        <strong>commit messages</strong>, or internal notes” — and it is manually invoked, so
-        nothing fires it when Claude writes a commit message mid-task. The {{RATIO}}× length gap
-        is what that looks like in the data. The rules may be fine; nothing triggers them.
-      </p>
-    </div>
-  </section>
-
-  <section>
-    <div class="sechead">
-      <h2>Closing the silence gap</h2>
-      <p class="prose note">
-        Detectors that need no complaint from the user. Each is countable from transcripts already
-        on disk, and each targets one of the four patterns flagged as undercounted.
-      </p>
-    </div>
-    <div class="scroll">
-      <table>
-        <thead>
-          <tr><th>Target</th><th>Signal, with no complaint required</th><th>Countable?</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="kindcell">lost_context</td>
-            <td>Claude asks for a fact that already appears in an earlier message in the same session</td>
-            <td>Yes — string and semantic match against prior turns</td>
-          </tr>
-          <tr>
-            <td class="kindcell">inefficient_process</td>
-            <td>The same command re-run after failing; runs of consecutive failed tool calls</td>
-            <td>Yes — exit codes and command text are in the transcript</td>
-          </tr>
-          <tr>
-            <td class="kindcell">incomplete</td>
-            <td>Claude reports done while a test failed, a TODO was left, or a listed subtask never ran</td>
-            <td>Yes — completion language against tool results in the same turn</td>
-          </tr>
-          <tr>
-            <td class="kindcell">wrong_approach</td>
-            <td>Code written and then deleted or reverted inside the same session</td>
-            <td>Partly — proxy only; some rework is legitimate iteration</td>
-          </tr>
-        </tbody>
-      </table>
     </div>
   </section>
 
@@ -500,87 +391,61 @@
     <div class="prose">
       <p>
         <strong>Finders cast wide, judging cut hard.</strong> Structural signals — a short message
-        right after a long assistant turn, a negation-leading message, profanity — surfaced 1,080
-        candidates from 2,190 of the user's messages. Triage kept 325. A second pass read the full
-        surrounding conversation and confirmed {{CONFIRMED}}, killing the rest for pointing at a
-        vendor, a tool, or the user themselves rather than at Claude.
+        right after a long assistant turn, a negation-leading message, profanity — surfaced
+        {{CANDIDATES}} candidate windows. Triage promoted {{TRIAGED}}. A second pass read the full
+        surrounding conversation and confirmed {{RAW}}, killing the rest for pointing at a vendor,
+        a tool, or the user themselves rather than at Claude.
       </p>
       <p>
-        <strong>Profanity finds, it does not rank.</strong> the user's swearing rate quadrupled on
-        2026-07-20 and is four times higher in Claude Code than in chat. Weighting severity on it
-        would have buried everything earlier and most of the chat corpus.
+        <strong>Profanity finds, it does not rank.</strong> Swearing rates drift over time and
+        differ by interface, so weighting severity on them would bury whichever era or corpus
+        happened to be politer.
       </p>
       <p>
-        <strong>Only a shared quote proves a duplicate.</strong> the user, on the first draft:
-        <em>“quite a few of the findings seem to actually be duplicates of each other.”</em> True —
-        the judges sometimes wrote up one message twice, and resuming a session replays earlier
-        messages into a second transcript. The first fix also merged incidents that merely sat
-        close together in one session under the same label, on the theory that they were one
-        argument. The user killed that theory by reading one: a diagram misreading merged with an
-        inaccessible-file-path complaint four turns later. Measuring the semantic similarity
-        inside every proximity merge confirmed it — <strong>12 of 16 scored between 0.01 and
-        0.11</strong>. Proximity means two things went wrong near each other, not that one thing
-        went wrong. Merging is now on identical quote alone: {{RAW}} confirmed incidents collapse
-        to {{CONFIRMED}}, and the merge keeps the worst member so a repeat flag can never be lost
-        to merge order.
+        <strong>Only a shared quote proves a duplicate.</strong> Judges sometimes write up one
+        message twice, and resuming a session replays earlier messages into a second transcript.
+        Merging incidents that merely sit close together in one session under the same label
+        assumes they are one argument, and that assumption does not hold — proximity means two
+        things went wrong near each other, not that one thing went wrong. Merging is on identical
+        quote alone: {{RAW}} confirmed incidents collapse to {{CONFIRMED}}, and the merge keeps
+        the worst member so a repeat flag can never be lost to merge order.
       </p>
       <p>
-        <strong>The user's rulings outrank the judges'.</strong> The judges are a rubric applied by a
-        model; the user is the person the rules are for. Where they have corrected a finding it is marked
-        <em>Corrected by the user</em>, their wording replaces theirs, and it survives a re-run via
-        <code>findings/overrides.json</code>.
+        <strong>The user's rulings outrank the judges'.</strong> The judges are a rubric applied
+        by a model; the user is the person the rules are for. Where they have corrected a finding
+        it is marked <em>Corrected by the user</em>, their wording replaces the judges', and it
+        survives a re-run via <code>overrides.json</code>.
       </p>
       <p>
-        <strong>The taxonomy came from the user, not the rubric.</strong> One label,
-        <code>bad_assumption</code>, held 61 episodes — too coarse to tell which rule would
-        prevent what. Hand review of 12 of them named four distinct failures: leaking internal
-        context into external output, trusting dated internal knowledge over what the user had just
-        told us, applying broad patterns that do not fit the situation, and building on premises
-        never checked. Classifying all 61 against those names left <strong>no residue</strong> —
-        every episode fit one of the four. They now stand as separate patterns.
+        <strong>A coarse label hides which rule would help.</strong> A single kind holding dozens
+        of episodes cannot say what to fix. Where hand review splits one into distinct failures,
+        the sub-kinds replace it and the ruling on the parent is inherited by them.
       </p>
       <p>
         <strong>Repeat detection is a finder plus a review, not a pattern match.</strong> Repeats
-        gate the rule bar, and the judges caught only 9. A lexical pass over the user's own words
-        found 36 more candidates — but hand-checking every one of them against the corpus put its
-        precision at <strong>47%</strong>. Half the matches meant the opposite: <em>“I typo'd when
-        i told you to use homebrew”</em> is the user correcting themselves; <em>“Solaar still doesn't
-        show the reciever”</em> is a status report. The user also pointed out that their
-        <em>“We've talked about thhis”</em> only matched because the typo happened to fall outside
-        the matched words. So the pattern was demoted to a finder and a review pass read the full
-        context around each candidate, which handles typos for free by reading meaning. Final
-        count: <strong>15 repeats</strong>, not the 9 the judges found nor the 21 the raw pattern
-        claimed.
+        gate the rule bar, so a missed one changes which patterns become rules. Lexical matching
+        on phrases meaning “I already told you” has poor precision — many matches mean the
+        opposite, and a typo defeats character matching outright. So the pattern is a finder only,
+        and a review pass reads the full context around each candidate, which handles typos for
+        free by reading meaning.
       </p>
       <p>
-        <strong>Coverage is complete, but four stages needed repair.</strong> The triage model
-        silently dropped 19 of 1,080 items while reporting full counts; the judges dropped 2 of
-        325. Both were backfilled by hand. The comment extractor first emitted one item per
-        comment <em>line</em>, which would have length-weighted the fail rate — 2,546 fragments
-        were regrouped into 852 blocks and re-judged. And session counts undercounted the chat
-        corpus until the dedup pass rebuilt them from message ids: <code>bad_assumption</code>
-        was reported across 13 sessions, when the real figure is 27.
-      </p>
-      <p>
-        <strong>A judged rate is only as good as its rubric.</strong> The comment pass is the
-        proof: a clean-looking 15.6% collapsed the moment it met comments Claude had itself
-        replaced. Any number here resting on a model's opinion carries that risk.
+        <strong>A judged rate is only as good as its rubric.</strong> A rubric that never asks
+        whether something is three times longer than it needs to be cannot report verbosity, no
+        matter how clean the resulting percentage looks. Any number here resting on a model's
+        opinion carries that risk.
       </p>
       <p>
         <strong>What this cannot see.</strong> Everything the user absorbed without saying so.
-        Failures inside subagent transcripts, excluded. Repos with a separate upstream remote,
-        excluded because the user curated those themselves. And of 852 authored comment blocks only 384
-        could be checked against a live working tree; the rest live in worktrees since deleted.
+        Failures inside subagent transcripts, excluded. Repos configured as excluded, and
+        comments whose files no longer exist on disk.
       </p>
     </div>
   </section>
 
   <footer>
-    Pipeline in <code>tools/</code>, re-runnable against
-    future history; this page is generated by <code>build_report.py</code>. Evidence stays local —
-    <code>findings/</code> is gitignored from the first commit. Corpus: 95 Claude Code transcripts
-    and 60 exported chats; 233 authored commit and PR bodies; 1,785 landed commits; 68 pull
-    requests; 852 code comments.
+    Generated by <code>build_report.py</code>. Evidence stays local — the findings directory is
+    gitignored and never leaves the machine it was built on.
   </footer>
 
 </div>

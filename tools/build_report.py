@@ -199,6 +199,43 @@ def main():
         "with_writes": sum(1 for r in interrupts if r.get("file_writes_since_prompt")),
     }
 
+    # Corpus window, taken from the incidents themselves rather than assumed.
+    days = sorted(j["ts"][:10] for j in judged if j.get("ts"))
+    window = f"{days[0]} \u2192 {days[-1]}" if days else ""
+
+    # Funnel. Each stage is counted from the file that stage wrote, so a missing
+    # stage shows 0 rather than a number carried over from a previous run.
+    candidates = len(load("candidates_transcripts.jsonl")) + len(load("candidates_chat.jsonl"))
+    triaged_out = len(load("judged.jsonl"))
+
+    def profile(*labels):
+        """Style profile by label, accepting the pre-rename name."""
+        for want in labels:
+            for prof in style.get("profiles", []):
+                if prof.get("label") == want:
+                    return prof
+        return {}
+
+    user_p = profile("user_hand_written", "greg_hand_written")
+    claude_p = profile("claude_co_authored")
+    other_p = profile("other_humans_same_repos")
+
+    def chars(prof):
+        return int(prof.get("body_chars_median") or 0)
+
+    widest = max(chars(user_p), chars(claude_p), chars(other_p), 1)
+
+    def width(prof):
+        return max(1, round(100 * chars(prof) / widest))
+
+    def as_pct(value):
+        return f"{round((value or 0) * 100)}%"
+
+    checked = survival.get("checked_against_worktree", 0)
+    lost = survival.get("did_not_survive", 0)
+    survived = max(0, checked - lost)
+    widest_c = max(survived, lost, 1)
+
     template = open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "report_template.html")
     ).read()
@@ -211,7 +248,6 @@ def main():
         .replace("{{REPEATS}}", str(repeats))
         .replace("{{SHRINKS}}", str(shrinks))
         .replace("{{RAW}}", str(raw_count))
-        .replace("{{COLLAPSED}}", str(raw_count - len(judged)))
         .replace("{{INT_N}}", str(int_stats["n"]))
         .replace("{{INT_SESSIONS}}", str(int_stats["sessions"]))
         .replace("{{INT_MED_S}}", str(int_stats["median_s"]))
@@ -220,9 +256,31 @@ def main():
         .replace("{{INT_P90_CALLS}}", str(int_stats["p90_calls"]))
         .replace("{{INT_OVER3}}", str(int_stats["over_3min"]))
         .replace("{{INT_WRITES}}", str(int_stats["with_writes"]))
-        .replace("{{CLAUDE_CHARS}}", str(int(style["profiles"][1]["body_chars_median"])))
-        .replace("{{USER_CHARS}}", str(int(style["profiles"][0]["body_chars_median"])))
-        .replace("{{RATIO}}", str(style["ratios"]["body_chars_median"]))
+        .replace("{{INT_MED_W}}", str(max(1, round(
+            100 * int_stats["median_s"] / (int_stats["p90_s"] or 1)))))
+        .replace("{{WINDOW}}", window)
+        .replace("{{CANDIDATES}}", f"{candidates:,}")
+        .replace("{{TRIAGED}}", f"{triaged_out:,}")
+        .replace("{{CLAUDE_CHARS}}", str(chars(claude_p)))
+        .replace("{{USER_CHARS}}", str(chars(user_p)))
+        .replace("{{OTHER_CHARS}}", str(chars(other_p)))
+        .replace("{{CLAUDE_N}}", f"{claude_p.get('n', 0):,}")
+        .replace("{{USER_N}}", f"{user_p.get('n', 0):,}")
+        .replace("{{OTHER_N}}", f"{other_p.get('n', 0):,}")
+        .replace("{{CLAUDE_W}}", str(width(claude_p)))
+        .replace("{{USER_W}}", str(width(user_p)))
+        .replace("{{OTHER_W}}", str(width(other_p)))
+        .replace("{{CLAUDE_LINES}}", str(int(claude_p.get("body_lines_median") or 0)))
+        .replace("{{USER_LINES}}", str(int(user_p.get("body_lines_median") or 0)))
+        .replace("{{CLAUDE_EMPTY}}", as_pct(claude_p.get("pct_no_body")))
+        .replace("{{USER_EMPTY}}", as_pct(user_p.get("pct_no_body")))
+        .replace("{{COMMENT_BLOCKS}}", f"{survival.get('authored_blocks', 0):,}")
+        .replace("{{COMMENT_CHECKED}}", f"{checked:,}")
+        .replace("{{COMMENT_SURVIVED}}", f"{survived:,}")
+        .replace("{{COMMENT_LOST}}", f"{lost:,}")
+        .replace("{{COMMENT_SURV_W}}", str(max(1, round(100 * survived / widest_c))))
+        .replace("{{COMMENT_LOST_W}}", str(max(1, round(100 * lost / widest_c))))
+        .replace("{{RATIO}}", str(style.get("ratios", {}).get("body_chars_median", "")))
     )
 
     out = os.path.join(FINDINGS, "report.html")
