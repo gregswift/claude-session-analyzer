@@ -42,23 +42,63 @@ CORRECTION_PHRASE = re.compile(
 )
 
 
+def corpus_roots():
+    """Every directory holding session transcripts, local machine first.
+
+    Extra machines are added by unpacking their tarball and listing the path in
+    findings/corpus_roots.json or DISCIPLINE_EXTRA_ROOTS (colon-separated). Each
+    root may be either a `projects` directory or its parent.
+    """
+    roots = [("local", PROJECTS)]
+    extra = []
+
+    config = os.path.join(FINDINGS, "corpus_roots.json")
+    if os.path.exists(config):
+        extra += json.load(open(config))
+    env = os.environ.get("DISCIPLINE_EXTRA_ROOTS", "")
+    extra += [p for p in env.split(":") if p.strip()]
+
+    for entry in extra:
+        label, path = (entry["label"], entry["path"]) if isinstance(entry, dict) else (
+            os.path.basename(entry.rstrip("/")),
+            entry,
+        )
+        path = os.path.expanduser(path)
+        if os.path.isdir(os.path.join(path, "projects")):
+            path = os.path.join(path, "projects")
+        if os.path.isdir(path):
+            roots.append((label, path))
+        else:
+            print(f"WARNING: corpus root not found, skipped: {path}")
+    return roots
+
+
 def iter_transcripts():
-    """Yield (project_dir, path) for every top-level session transcript."""
-    for root, _dirs, files in os.walk(PROJECTS):
-        # Subagent transcripts live in subagents/; they are not the user talking.
-        if os.path.basename(root) == "subagents":
-            continue
-        for name in files:
-            if not name.endswith(".jsonl"):
+    """Yield (project_dir, path) for every top-level session transcript.
+
+    Sessions are deduped by filename across machines: transcript names are UUIDs,
+    so a repeat means the same session was collected twice, not two sessions.
+    """
+    seen = set()
+    for label, base in corpus_roots():
+        for root, _dirs, files in os.walk(base):
+            # Subagent transcripts live in subagents/; they are not the user talking.
+            if os.path.basename(root) == "subagents":
                 continue
-            path = os.path.join(root, name)
-            rel = os.path.relpath(path, PROJECTS)
-            project = rel.split(os.sep)[0]
-            if any(s in project for s in EXCLUDED_PROJECT_SUBSTRINGS):
-                continue
-            if any(s in name for s in EXCLUDED_SESSIONS):
-                continue
-            yield project, path
+            for name in files:
+                if not name.endswith(".jsonl"):
+                    continue
+                path = os.path.join(root, name)
+                rel = os.path.relpath(path, base)
+                project = rel.split(os.sep)[0]
+                if any(s in project for s in EXCLUDED_PROJECT_SUBSTRINGS):
+                    continue
+                if any(s in name for s in EXCLUDED_SESSIONS):
+                    continue
+                if name in seen:
+                    continue
+                seen.add(name)
+                yield (project if label == "local" else f"{label}/{project}"), path
 
 
 def read_jsonl(path):

@@ -197,6 +197,29 @@ def apply_reclassification(incidents):
     return applied
 
 
+def apply_kind_merges(incidents):
+    """Collapse labels that name the same failure.
+
+    The user: "Having past stated rules, policies, or questions be ignored is the
+    root of this effort." That is one pattern. It had been split across
+    ignored_instruction and question_ignored, which made the thing they care most
+    about look like two small findings instead of one large one.
+    """
+    path = os.path.join(FINDINGS, "kind_merges.json")
+    if not os.path.exists(path):
+        return 0
+    merges = {k: v for k, v in json.load(open(path)).items() if not k.startswith("_")}
+    n = 0
+    for inc in incidents:
+        target = merges.get(inc.get("kind"))
+        if not target:
+            continue
+        inc["kind_before_merge"] = inc["kind"]
+        inc["kind"] = target
+        n += 1
+    return n
+
+
 def apply_greg_review(incidents):
     """The user's own classification of episodes they read, in their own words.
 
@@ -303,6 +326,9 @@ def main():
     if split:
         print(f"reclassified {split} episodes into the user's sub-kinds")
     reviewed = apply_greg_review(merged)
+    fused = apply_kind_merges(merged)
+    if fused:
+        print(f"merged {fused} episodes into unified kinds")
     if reviewed:
         print(f"applied the user's own classification to {reviewed} episodes")
     applied = apply_overrides(merged)
