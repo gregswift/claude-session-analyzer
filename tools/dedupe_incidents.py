@@ -83,7 +83,42 @@ def episodes(incidents, gap):
                 groups.append(run)
                 run = [nxt]
         groups.append(run)
-    return groups
+
+    # Second pass, across sessions. Resuming a session writes a new transcript
+    # that replays the earlier messages, so the same words reach the judges under
+    # two different session ids and the session-bucketed pass above cannot see it.
+    #
+    # Match on EVERY quote in a group, not just the first one: a group that
+    # already merged several turns holds several quotes, and the shared one is
+    # not necessarily the one it happens to lead with.
+    owner = {}  # (kind, quote) -> index of the group that claimed it
+    parent = list(range(len(groups)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+
+    for i, group in enumerate(groups):
+        for member in group:
+            key = (member["kind"], norm(member["evidence_quote"])[:200])
+            if not key[1]:
+                continue
+            if key in owner:
+                union(owner[key], i)
+            else:
+                owner[key] = i
+
+    combined = collections.defaultdict(list)
+    for i, group in enumerate(groups):
+        combined[find(i)].extend(group)
+    return list(combined.values())
 
 
 def merge(group):
@@ -97,11 +132,17 @@ def merge(group):
     merged["occurrences"] = len(group)
     merged["merged_ids"] = [x["id"] for x in group]
     if len(group) > 1:
-        merged["also_said"] = [
-            x["evidence_quote"]
-            for x in group
-            if x["id"] != lead["id"] and x.get("evidence_quote")
-        ]
+        # Members of an episode often quote the same sentence. Showing it twice
+        # is what made the report look duplicated in the first place.
+        also, seen_text = [], {norm(lead.get("evidence_quote"))}
+        for x in group:
+            quote = x.get("evidence_quote")
+            key = norm(quote)
+            if not quote or key in seen_text:
+                continue
+            seen_text.add(key)
+            also.append(quote)
+        merged["also_said"] = also
         # Prefer a rule candidate from a repeat member - it is the one the user had
         # already asked for.
         repeats = [x for x in group if x.get("repeat_after_instruction")]
