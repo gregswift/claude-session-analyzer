@@ -16,6 +16,18 @@ EXCLUDED_SESSIONS = {"6977985e-4cc2-4c1c-bce2-898b11f8e368"}
 # so they are not evidence about the model's output.
 EXCLUDED_PROJECT_SUBSTRINGS = ("-Development-up-",)
 
+# Projects whose commit messages, PR bodies and code comments are not evidence,
+# because the user did not review them to the standard he applies at work: "I havent
+# doen as much triaging of the PRs and commits on the sideproject project so we can
+# leave them alone." Their TRANSCRIPTS still count - what he said to Claude in
+# them is as good as anywhere - only the authored artifacts are excluded.
+ARTIFACT_EXCLUDED_PROJECTS = ("sideproject",)
+
+
+def artifacts_allowed(project):
+    """False for projects whose written artifacts the user has ruled out as evidence."""
+    return not any(s in (project or "") for s in ARTIFACT_EXCLUDED_PROJECTS)
+
 WINDOW_START = "2026-07-08"
 
 PROFANITY = re.compile(
@@ -150,7 +162,26 @@ def is_real_prompt(entry):
     # Harness injections and command scaffolding, not typed input.
     if body.startswith("<") or body.startswith("Caveat:"):
         return False
+    # The harness writes these when the user hits stop. They are not messages - they
+    # carry no words to judge - but 65 of them were being counted as prompts and
+    # generating candidates with an empty quote.
+    if INTERRUPT_MARKER.match(body):
+        return False
     return True
+
+
+INTERRUPT_MARKER = re.compile(r"^\[Request interrupted by user")
+
+
+def is_interrupt(entry):
+    """The user hit stop. Not a message, but a signal: they cut Claude off mid-action,
+    which they would rarely bother to complain about afterwards."""
+    if entry.get("type") != "user" or entry.get("isSidechain"):
+        return False
+    if entry.get("toolUseResult") is not None:
+        return False
+    body = text_of((entry.get("message") or {}).get("content")).strip()
+    return bool(INTERRUPT_MARKER.match(body))
 
 
 def tool_uses(entry):

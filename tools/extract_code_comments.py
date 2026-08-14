@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from common import (  # noqa: E402
     FINDINGS,
+    artifacts_allowed,
     ensure_findings_dir,
     iter_transcripts,
     read_jsonl,
@@ -121,6 +122,8 @@ def main():
     seen = set()
 
     for project, path in iter_transcripts():
+        if not artifacts_allowed(project):
+            continue
         session = os.path.basename(path)[:-6]
         for entry in read_jsonl(path):
             if entry.get("type") != "assistant" or entry.get("isSidechain"):

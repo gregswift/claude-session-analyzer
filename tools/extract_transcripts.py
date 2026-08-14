@@ -137,13 +137,18 @@ def main():
             stats["flagged"] += 1
             candidates.append(
                 {
-                    "id": f"{session}:{i}",
+                    # Keyed on the message uuid, never on position. Turn indices
+                    # shift whenever the prompt filter changes - excluding 65
+                    # harness interrupt markers renumbered 510 of 1163 ids and
+                    # orphaned every verdict and ruling attached to them.
+                    "id": f"{session}:{turn.get('uuid', '')[:12]}",
                     "source": "transcript",
                     "project": project,
                     "session": session,
                     "cwd": cwd,
                     "branch": branch,
                     "ts": turn["ts"],
+                    "turn": i,
                     "flags": flags,
                     "prompt": turn["text"][:4000],
                     "preceding_output_chars": out_size,

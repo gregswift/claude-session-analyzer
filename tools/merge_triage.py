@@ -90,6 +90,7 @@ def main():
     seen_ids = set()
     merged = []
     orphans = 0
+    ghost_ids = []
     for verdict in verdicts:
         vid = verdict["id"]
         if vid in seen_ids:
@@ -97,7 +98,11 @@ def main():
         seen_ids.add(vid)
         cand = cands.get(vid)
         if not cand:
+            # A verdict for an id that is not a candidate. One triage batch
+            # invented five of these - fabricated ids, not truncation - so this
+            # join is load-bearing, not a formality. Never silent.
             orphans += 1
+            ghost_ids.append(vid)
             continue
         merged.append(
             {
@@ -119,6 +124,9 @@ def main():
                 lookup[item["id"]] = item
         with open(os.path.join(FINDINGS, "triage_missing.json"), "w") as fh:
             json.dump([lookup[m] for m in missing if m in lookup], fh, indent=1)
+
+    if ghost_ids:
+        print(f"WARNING: {len(ghost_ids)} fabricated ids dropped: {ghost_ids[:6]}")
 
     coverage = len(seen_ids) / max(1, len(cands))
     keep = [

@@ -73,6 +73,7 @@ def main():
                 "text": message_text(m)[:CLIP],
                 "full_len": len(message_text(m)),
                 "ts": m.get("created_at"),
+                "uuid": m.get("uuid"),
             }
             for m in msgs
         ]
@@ -97,10 +98,12 @@ def main():
             )
             candidates.append(
                 {
-                    "id": f"{conv.get('uuid', '?')[:8]}:{i}",
+                    # Message uuid, never position - see extract_transcripts.
+                    "id": f"{conv.get('uuid', '?')[:8]}:{turn.get('uuid', '')[:12]}",
                     "source": "chat",
                     "conversation": conv.get("name"),
                     "ts": turn["ts"],
+                    "turn": i,
                     "flags": flags,
                     "prompt": turn["text"][:4000],
                     "preceding_output_chars": out_size,
