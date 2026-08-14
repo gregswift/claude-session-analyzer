@@ -15,7 +15,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS, WINDOW_START, ensure_findings_dir, write_jsonl  # noqa: E402
+from common import (  # noqa: E402
+    FINDINGS,
+    ensure_findings_dir,
+    window_start,
+    write_jsonl,
+)
+
+WINDOW_START = window_start()
 
 SEP = "\x1e"  # record separator - safe inside commit bodies
 FMT = SEP.join(["%H", "%an", "%ae", "%cn", "%aI", "%s", "%b"]) + "\x1d"

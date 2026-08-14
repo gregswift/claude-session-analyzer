@@ -17,9 +17,14 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS, ensure_findings_dir, strip_trailers  # noqa: E402
+from common import (  # noqa: E402
+    FINDINGS,
+    config_required,
+    ensure_findings_dir,
+    strip_trailers,
+)
 
-GREG_EMAILS = {"you@work.example", "you@example.com"}
+AUTHOR_EMAILS = set(config_required("author_emails"))
 CLAUDE_TRAILER = re.compile(r"Co-[Aa]uthored-[Bb]y:.*(Claude|anthropic)", re.I)
 BULLET = re.compile(r"^\s*[-*]\s", re.M)
 HEADING = re.compile(r"^\s*#{1,4}\s|\*\*[^*]+\*\*:", re.M)
@@ -56,13 +61,13 @@ def main():
     path = os.path.join(FINDINGS, "git_landed.jsonl")
     commits = [json.loads(line) for line in open(path)]
 
-    greg = [c for c in commits if c["author_email"] in GREG_EMAILS]
-    claude = [c for c in greg if CLAUDE_TRAILER.search(c["body"] or "")]
-    hand = [c for c in greg if c not in claude]
+    author_commits = [c for c in commits if c["author_email"] in AUTHOR_EMAILS]
+    claude = [c for c in author_commits if CLAUDE_TRAILER.search(c["body"] or "")]
+    hand = [c for c in author_commits if c not in claude]
     others = [
         c
         for c in commits
-        if c["author_email"] not in GREG_EMAILS and "bot" not in c["author_email"]
+        if c["author_email"] not in AUTHOR_EMAILS and "bot" not in c["author_email"]
     ]
 
     result = {

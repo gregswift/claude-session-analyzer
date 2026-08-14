@@ -16,7 +16,19 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS  # noqa: E402
+from common import CONFIG, HOME, FINDINGS  # noqa: E402
+
+# Claude encodes a project path as its slashes-to-dashes form. Drop the part
+# that is just the user's home directory, plus anything else the config names.
+PROJECT_STRIP = ["-" + HOME.strip("/").replace("/", "-") + "-"] + list(
+    CONFIG["project_label_strip"]
+)
+
+
+def shorten_project(project):
+    for prefix in PROJECT_STRIP:
+        project = project.replace(prefix, "")
+    return project
 
 CLASS_NAME = {
     "A": "what Claude did",
@@ -61,7 +73,7 @@ def incident_html(inc, index):
         f'<span>{esc((inc.get("ts") or "")[:10])}</span>',
         f'<span>{esc(inc.get("source") or "")}</span>',
     ]
-    project = (inc.get("project") or "").replace("-Users-example-user-Development-", "")
+    project = shorten_project(inc.get("project") or "")
     if project:
         meta.append(f'<span class="proj">{esc(project)}</span>')
     conf = inc.get("confidence")

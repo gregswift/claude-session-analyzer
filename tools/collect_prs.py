@@ -15,16 +15,17 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS, WINDOW_START, ensure_findings_dir, write_jsonl  # noqa: E402
+from common import (  # noqa: E402
+    FINDINGS,
+    config_required,
+    ensure_findings_dir,
+    window_start,
+    write_jsonl,
+)
 
-REPOS = [
-    "example-org/platform-infra",
-    "example-org/legacy-infra",
-    "example-org/service-a",
-    "example-org/service-b",
-    "example-org/ansible-infra",
-]
-AUTHOR = "example-user"
+REPOS = config_required("pr_repos")
+AUTHOR = config_required("pr_author")
+WINDOW_START = window_start()
 CACHE = os.path.join(FINDINGS, ".pr_cache")
 
 

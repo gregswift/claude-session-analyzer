@@ -1,34 +1,91 @@
-"""Shared helpers for the discipline sweep pipeline."""
+"""Shared helpers for the claude-session-analyzer pipeline."""
 
 import json
 import os
 import re
+import sys
 
 HOME = os.path.expanduser("~")
 PROJECTS = os.path.join(HOME, ".claude", "projects")
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FINDINGS = os.path.join(REPO, "findings")
 
-# This grilling session designed the sweep; its contents would poison it.
-EXCLUDED_SESSIONS = {"6977985e-4cc2-4c1c-bce2-898b11f8e368"}
 
-# Forks with a separate upstream remote. The user curated those comments himself,
-# so they are not evidence about the model's output.
-EXCLUDED_PROJECT_SUBSTRINGS = ("-Development-up-",)
+def _output_arg():
+    """`--output PATH` / `-o PATH`, honoured by every tool in the pipeline."""
+    for flag in ("--output", "-o"):
+        if flag in sys.argv:
+            i = sys.argv.index(flag)
+            if i + 1 < len(sys.argv):
+                return sys.argv[i + 1]
+    return None
 
-# Projects whose commit messages, PR bodies and code comments are not evidence,
-# because the user did not review them to the standard he applies at work: "I havent
-# doen as much triaging of the PRs and commits on the sideproject project so we can
-# leave them alone." Their TRANSCRIPTS still count - what he said to Claude in
-# them is as good as anywhere - only the authored artifacts are excluded.
-ARTIFACT_EXCLUDED_PROJECTS = ("sideproject",)
+
+# Findings are generated output: they land under the working directory unless
+# told otherwise, never next to the code. Precedence: --output, then
+# CSA_FINDINGS, then ./findings.
+FINDINGS = os.path.abspath(
+    _output_arg() or os.environ.get("CSA_FINDINGS") or "findings"
+)
+
+CONFIG_PATH = os.environ.get("CSA_CONFIG") or "csa.config.json"
+
+# Everything here is per-user. No corpus, employer, project or person belongs in
+# this file - see csa.config.example.json.
+CONFIG_DEFAULTS = {
+    # Required by the tool that uses them; absent means "fail loudly".
+    "author_emails": None,   # compare_style: which commits are hand-written
+    "pr_repos": None,        # collect_prs: repos to sweep, "owner/name"
+    "pr_author": None,       # collect_prs: GitHub login to filter on
+    "window_start": None,    # collect_git, collect_prs: ISO date lower bound
+    # Optional; empty means no filtering.
+    "extra_roots": [],
+    "excluded_sessions": [],
+    "excluded_project_substrings": [],
+    "artifact_excluded_projects": [],
+    "project_label_strip": [],
+}
+
+
+def load_config():
+    cfg = dict(CONFIG_DEFAULTS)
+    if os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH) as fh:
+            cfg.update(json.load(fh))
+    return cfg
+
+
+CONFIG = load_config()
+
+
+def config_required(key):
+    """A missing value is a hard stop, not a silent default. Guessing here would
+    sweep the wrong corpus and the run would still report success."""
+    value = CONFIG.get(key)
+    if value in (None, "", [], {}):
+        raise SystemExit(
+            f"ERROR: '{key}' is not set.\n"
+            f"  Add it to {os.path.abspath(CONFIG_PATH)} "
+            f"(copy csa.config.example.json to start), or set CSA_CONFIG to "
+            f"another path."
+        )
+    return value
+
+
+EXCLUDED_SESSIONS = set(CONFIG["excluded_sessions"])
+EXCLUDED_PROJECT_SUBSTRINGS = tuple(CONFIG["excluded_project_substrings"])
+ARTIFACT_EXCLUDED_PROJECTS = tuple(CONFIG["artifact_excluded_projects"])
 
 
 def artifacts_allowed(project):
-    """False for projects whose written artifacts the user has ruled out as evidence."""
+    """False for projects whose written artifacts are ruled out as evidence -
+    ones the user did not review to the standard they apply elsewhere. Their
+    TRANSCRIPTS still count; only the authored artifacts are excluded."""
+    if not ARTIFACT_EXCLUDED_PROJECTS:
+        return True
     return not any(s in (project or "") for s in ARTIFACT_EXCLUDED_PROJECTS)
 
-WINDOW_START = "2026-07-08"
+
+def window_start():
+    return config_required("window_start")
 
 PROFANITY = re.compile(
     r"\b(fuck\w*|shit\w*|wtf|ffs|wth|goddamn\w*|dammit|damn it|bullshit"
@@ -58,16 +115,18 @@ def corpus_roots():
     """Every directory holding session transcripts, local machine first.
 
     Extra machines are added by unpacking their tarball and listing the path in
-    findings/corpus_roots.json or DISCIPLINE_EXTRA_ROOTS (colon-separated). Each
-    root may be either a `projects` directory or its parent.
+    `extra_roots` in the config file, or in CSA_EXTRA_ROOTS (colon-separated).
+    Each root may be either a `projects` directory or its parent.
     """
     roots = [("local", PROJECTS)]
-    extra = []
+    extra = list(CONFIG["extra_roots"])
 
-    config = os.path.join(FINDINGS, "corpus_roots.json")
-    if os.path.exists(config):
-        extra += json.load(open(config))
-    env = os.environ.get("DISCIPLINE_EXTRA_ROOTS", "")
+    # Compatibility: the corpus root list used to live in the findings dir.
+    legacy = os.path.join(FINDINGS, "corpus_roots.json")
+    if os.path.exists(legacy):
+        with open(legacy) as fh:
+            extra += json.load(fh)
+    env = os.environ.get("CSA_EXTRA_ROOTS", "")
     extra += [p for p in env.split(":") if p.strip()]
 
     for entry in extra:
