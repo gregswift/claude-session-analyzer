@@ -32,10 +32,48 @@ CLASS_LABEL = {
 
 
 def load_judged():
-    path = os.path.join(FINDINGS, "judged.jsonl")
-    if not os.path.exists(path):
-        sys.exit("no findings/judged.jsonl - run the judging pass first")
-    return [json.loads(line) for line in open(path)]
+    """Assemble judge_out/*.json, then report anything the judges dropped.
+
+    The judging models silently omit items from long batches while still
+    reporting a full count, so the join is the only trustworthy census."""
+    out_dir = os.path.join(FINDINGS, "judge_out")
+    if not os.path.isdir(out_dir):
+        sys.exit("no findings/judge_out - run the judging pass first")
+
+    rows, seen = [], set()
+    for name in sorted(os.listdir(out_dir)):
+        if not name.endswith(".json"):
+            continue
+        try:
+            data = json.load(open(os.path.join(out_dir, name)))
+        except ValueError:
+            print(f"unparseable: {name}")
+            continue
+        if isinstance(data, dict):
+            data = data.get("results") or data.get("items") or []
+        for row in data:
+            if isinstance(row, dict) and row.get("id") and row["id"] not in seen:
+                seen.add(row["id"])
+                rows.append(row)
+
+    expected = set()
+    judge_in = os.path.join(FINDINGS, "judge_in")
+    if os.path.isdir(judge_in):
+        for name in sorted(os.listdir(judge_in)):
+            for item in json.load(open(os.path.join(judge_in, name))):
+                expected.add(item["id"])
+    missing = expected - seen
+    if missing:
+        print(f"WARNING: {len(missing)} of {len(expected)} items were never judged")
+        with open(os.path.join(FINDINGS, "judge_missing.json"), "w") as fh:
+            lookup = {}
+            for name in sorted(os.listdir(judge_in)):
+                for item in json.load(open(os.path.join(judge_in, name))):
+                    lookup[item["id"]] = item
+            json.dump([lookup[m] for m in missing], fh, indent=1)
+
+    write_jsonl(os.path.join(FINDINGS, "judged.jsonl"), rows)
+    return rows
 
 
 def load_severity():
