@@ -162,6 +162,30 @@ def main():
     repeats = sum(1 for j in judged if j.get("repeat_after_instruction"))
     shrinks = survival.get("in_session_shrinks", 0)
 
+    interrupts = load("interrupts.jsonl")
+    # One outlier spans a resumed session, so its clock covers the gap between
+    # sittings rather than a run. Excluded from the timing stats, kept in the count.
+    timed = sorted(
+        r["seconds_running"]
+        for r in interrupts
+        if r.get("seconds_running") is not None and r["seconds_running"] < 7200
+    )
+    calls = sorted(r["tool_calls_since_prompt"] for r in interrupts)
+
+    def pct(values, p):
+        return values[int(len(values) * p)] if values else 0
+
+    int_stats = {
+        "n": len(interrupts),
+        "sessions": len({r["session"] for r in interrupts}),
+        "median_s": pct(timed, 0.5),
+        "p90_s": pct(timed, 0.9),
+        "median_calls": pct(calls, 0.5),
+        "p90_calls": pct(calls, 0.9),
+        "over_3min": sum(1 for s in timed if s >= 180),
+        "with_writes": sum(1 for r in interrupts if r.get("file_writes_since_prompt")),
+    }
+
     template = open(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "report_template.html")
     ).read()
@@ -175,6 +199,14 @@ def main():
         .replace("{{SHRINKS}}", str(shrinks))
         .replace("{{RAW}}", str(raw_count))
         .replace("{{COLLAPSED}}", str(raw_count - len(judged)))
+        .replace("{{INT_N}}", str(int_stats["n"]))
+        .replace("{{INT_SESSIONS}}", str(int_stats["sessions"]))
+        .replace("{{INT_MED_S}}", str(int_stats["median_s"]))
+        .replace("{{INT_P90_MIN}}", f"{int_stats['p90_s'] / 60:.1f}")
+        .replace("{{INT_MED_CALLS}}", str(int_stats["median_calls"]))
+        .replace("{{INT_P90_CALLS}}", str(int_stats["p90_calls"]))
+        .replace("{{INT_OVER3}}", str(int_stats["over_3min"]))
+        .replace("{{INT_WRITES}}", str(int_stats["with_writes"]))
         .replace("{{CLAUDE_CHARS}}", str(int(style["profiles"][1]["body_chars_median"])))
         .replace("{{USER_CHARS}}", str(int(style["profiles"][0]["body_chars_median"])))
         .replace("{{RATIO}}", str(style["ratios"]["body_chars_median"]))

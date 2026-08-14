@@ -46,16 +46,53 @@ def load_repeat_review():
     return {r["id"]: bool(r.get("repeat")) for r in json.load(open(path))}
 
 
+def assemble_judged():
+    """Rebuild the confirmed set from judge_out every time.
+
+    judged.jsonl used to be an intermediate written by rank_findings, which
+    stopped regenerating it once incidents.jsonl existed. That left a stale file
+    holding pre-migration ids, and every one of the user's rulings silently matched
+    nothing. Read the source of truth instead of a cache of it.
+    """
+    out_dir = os.path.join(FINDINGS, "judge_out")
+    rows, seen = [], set()
+    for name in sorted(os.listdir(out_dir)):
+        if not name.endswith(".json"):
+            continue
+        try:
+            data = json.load(open(os.path.join(out_dir, name)))
+        except ValueError:
+            print(f"unparseable judge file: {name}")
+            continue
+        for row in data if isinstance(data, list) else []:
+            if isinstance(row, dict) and row.get("id") and row["id"] not in seen:
+                seen.add(row["id"])
+                rows.append(row)
+    write_jsonl(os.path.join(FINDINGS, "judged.jsonl"), rows)
+    return rows
+
+
+def load_candidate_ids():
+    ids = set()
+    for name in ("candidates_transcripts.jsonl", "candidates_chat.jsonl"):
+        path = os.path.join(FINDINGS, name)
+        if os.path.exists(path):
+            for line in open(path):
+                ids.add(json.loads(line)["id"])
+    return ids
+
+
 def load_confirmed():
     reviewed = load_repeat_review()
-    judged = [
-        j
-        for j in (
-            json.loads(line)
-            for line in open(os.path.join(FINDINGS, "judged.jsonl"))
-        )
-        if j.get("confirmed")
-    ]
+    judged = [j for j in assemble_judged() if j.get("confirmed")]
+
+    # A verdict must point at a real candidate. Stale ids from before the uuid
+    # migration, and ids a judging model invented outright, both land here.
+    valid = load_candidate_ids()
+    stale = [j["id"] for j in judged if j["id"] not in valid]
+    if stale:
+        print(f"dropping {len(stale)} verdicts with no candidate: {stale[:4]}")
+        judged = [j for j in judged if j["id"] in valid]
     triaged = {
         t["id"]: t
         for t in (

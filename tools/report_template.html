@@ -343,6 +343,32 @@
         </p>
       </div>
       <div class="panel">
+        <h3>Where the user hit stop</h3>
+        <p class="note">
+          {{INT_N}} interruptions across {{INT_SESSIONS}} sessions. They carry no words
+          to complain with, so they exist exactly where nothing was said.
+        </p>
+        <div class="chart">
+          <div class="row">
+            <div class="rowhead"><span>Typical stop</span><b>{{INT_MED_S}}s · {{INT_MED_CALLS}} calls</b></div>
+            <div class="track"><div class="fill me" style="width:14%"></div></div>
+          </div>
+          <div class="row">
+            <div class="rowhead"><span>Worst tenth</span><b>{{INT_P90_MIN}}min · {{INT_P90_CALLS}} calls</b></div>
+            <div class="track"><div class="fill bad" style="width:100%"></div></div>
+          </div>
+        </div>
+        <p class="note">
+          The user's three reasons for stopping: Claude is doing something they do not want;
+          The user is clarifying their own last message; or — <em>“you are running down a path that
+          needs more information or context otherwise its gonna be a lot of wasted work…
+          i have you on automode.”</em> Only the first and third are Claude's failure.
+          <strong>{{INT_OVER3}} stops came after 3+ minutes of work, and {{INT_WRITES}}
+          after files had already been written.</strong>
+        </p>
+      </div>
+
+      <div class="panel">
         <h3>Comments Claude replaced</h3>
         <p class="note">
           {{SHRINKS}} cases where Claude wrote a comment, then replaced it with a shorter one
