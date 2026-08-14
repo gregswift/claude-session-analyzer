@@ -124,6 +124,45 @@ def tool_uses(entry):
             yield block.get("name") or "", block.get("input") or {}
 
 
+# the user saying they already told us. The judges were told to set
+# repeat_after_instruction only when the window proves it, and they read that
+# conservatively - they missed 12 of 21 real repeats, including an explicit
+# "We've talked about thhis." Repeats gate the rule bar, so missing them decides
+# which patterns become rules.
+#
+# Every marker must name a prior communication act or an ongoing failure. Bare
+# "stop" is excluded: "Actually, stop. Give me a synopsis" is abandonment, not
+# repetition.
+REPEAT_MARKER = re.compile(
+    r"("
+    r"we[' ]?ve (talked|discussed|been over)"
+    r"|we (talked|discussed) about (this|that|it)"
+    # "i asked you" is a complaint; "what i asked for" is a noun phrase. Require
+    # the addressee for told/asked, and keep the intransitive verbs separate.
+    r"|\bi (already |just )?(told|asked) you\b"
+    r"|\bi (already |just )?(said|mentioned|explained|stated)\b"
+    r"|which is why i said"
+    r"|as i (said|asked|mentioned|explained)|like i said"
+    # Must be a complaint, not a reference. "a synopsis of what i asked for" is
+    # a request; "that isnt what i asked for" is the user repeating themselves.
+    r"|(that|this) (is|isn'?t|'?s not) what i asked"
+    r"|not what i (asked|wanted|said)"
+    r"|you keep\b|you (still|continue to)\b|still (do not|don'?t|doesn'?t|not)\b"
+    r"|stop referencing|stop (doing|trying|using)"
+    r"|i'?ve (said|told|asked)"
+    r"|per (my|our) (earlier|previous|last)"
+    r"|(said|told|asked|mentioned) (you |this |that )?(before|earlier|already)"
+    r"|how many times"
+    r")",
+    re.I,
+)
+
+
+def says_repeat(text):
+    """True when the user's own words say they had already told us."""
+    return bool(REPEAT_MARKER.search(text or ""))
+
+
 TRAILER = re.compile(
     r"^\s*(Co-Authored-By|Co-authored-by|Claude-Session|Generated with|Signed-off-by"
     r"|https://claude\.ai/code|🤖)",

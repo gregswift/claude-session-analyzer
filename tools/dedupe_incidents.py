@@ -24,7 +24,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS, ensure_findings_dir, write_jsonl  # noqa: E402
+from common import (  # noqa: E402
+    FINDINGS,
+    ensure_findings_dir,
+    says_repeat,
+    write_jsonl,
+)
 
 TURN_GAP = 12  # ~6 exchanges: close enough to be one argument
 
@@ -33,7 +38,16 @@ def norm(text):
     return re.sub(r"\W+", " ", (text or "")).strip().lower()
 
 
+def load_repeat_review():
+    """Verdicts from the pass that read full context around each candidate."""
+    path = os.path.join(FINDINGS, "repeat_judged.json")
+    if not os.path.exists(path):
+        return {}
+    return {r["id"]: bool(r.get("repeat")) for r in json.load(open(path))}
+
+
 def load_confirmed():
+    reviewed = load_repeat_review()
     judged = [
         j
         for j in (
@@ -60,6 +74,19 @@ def load_confirmed():
             j["turn"] = int(j["id"].rpartition(":")[2])
         except ValueError:
             j["turn"] = 0
+
+        # REPEAT_MARKER is a finder, not a verdict. Hand-checking every message
+        # it matched in the corpus put its precision at 47% - half the hits mean
+        # the opposite ("I typo'd when i told you to use homebrew" is the user
+        # correcting themselves). It also only survives typos by luck about where
+        # they land. So matches become candidates, and a review pass reading full
+        # context decides, which handles typos for free by reading meaning.
+        j["repeat_candidate"] = bool(
+            says_repeat(meta.get("prompt")) or says_repeat(j.get("evidence_quote"))
+        )
+        j["repeat_by_judge"] = bool(j.get("repeat_after_instruction"))
+        j["repeat_by_review"] = bool(reviewed.get(j["id"]))
+        j["repeat_after_instruction"] = j["repeat_by_judge"] or j["repeat_by_review"]
     return judged
 
 
@@ -146,6 +173,30 @@ def merge(group):
     return merged
 
 
+def apply_reclassification(incidents):
+    """Split coarse kinds into the sub-kinds the user identified.
+
+    Hand review of 12 of the 61 `bad_assumption` episodes and named four distinct
+    failures in them. Classifying all 61 against those names left no residue -
+    every episode fit one. A label that broad hides which rule would prevent
+    what, so the sub-kinds replace it.
+    """
+    path = os.path.join(FINDINGS, "reclassify_out.json")
+    if not os.path.exists(path):
+        return 0
+    mapping = {r["id"]: r for r in json.load(open(path))}
+    applied = 0
+    for inc in incidents:
+        row = mapping.get(inc["id"])
+        if not row or not row.get("kind"):
+            continue
+        inc["kind_was"] = inc["kind"]
+        inc["kind"] = row["kind"]
+        inc["reclassify_why"] = row.get("why")
+        applied += 1
+    return applied
+
+
 def apply_overrides(incidents):
     """Let the user's rulings beat the judges'.
 
@@ -178,9 +229,6 @@ def main():
         gap = int(sys.argv[sys.argv.index("--gap") + 1])
 
     confirmed = load_confirmed()
-    applied = apply_overrides(confirmed)
-    if applied:
-        print(f"applied {applied} of the user's corrections")
 
     if "--sensitivity" in sys.argv:
         print("gap  distinct  bad_assumption  repeats_lost")
@@ -194,10 +242,22 @@ def main():
             print(f"{g:>3}  {len(merged):>8}  {ba:>14}  {lost:>12}")
         return
 
+    # Order matters. Grouping keys on (kind, quote), so relabelling kinds first
+    # breaks apart merges whose members land in different sub-kinds - and members
+    # of an already-merged group are absent from the reclassification export
+    # entirely, so they strand as extra episodes. Group first, relabel the
+    # representatives, then let the user's explicit rulings beat both.
     groups = episodes(confirmed, gap)
     merged = sorted(
         (merge(g) for g in groups), key=lambda m: -float(m.get("severity") or 0)
     )
+    split = apply_reclassification(merged)
+    if split:
+        print(f"reclassified {split} episodes into the user's sub-kinds")
+    applied = apply_overrides(merged)
+    if applied:
+        print(f"applied {applied} of the user's corrections")
+
     write_jsonl(os.path.join(FINDINGS, "incidents.jsonl"), merged)
 
     collapsed = len(confirmed) - len(merged)

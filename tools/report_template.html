@@ -393,6 +393,22 @@
       </p>
     </div>
 
+    <div class="callout warn">
+      <h3>The most damaging pattern is below the bar</h3>
+      <p>
+        <code>context_leak</code> — internal PR and issue references, private repo paths, and
+        identifying names ending up in text bound for an external audience — has the
+        <strong>highest median severity of any pattern (5.54)</strong>, well above the
+        bar-clearing ones. It sits below the bar only because the user never had to repeat themselves
+        about it. Four episodes, four separate sessions, no repeat.
+      </p>
+      <p>
+        The bar exists to stop rules being written on one-off noise. This is not noise, and it is
+        the one failure here with consequences outside the conversation. Worth deciding on
+        directly rather than letting the threshold decide.
+      </p>
+    </div>
+
     <div class="callout">
       <h3>Nothing came back hook-shaped, and that may be the judges' fault</h3>
       <p>
@@ -487,6 +503,28 @@
         model; the user is the person the rules are for. Where they have corrected a finding it is marked
         <em>Corrected by the user</em>, their wording replaces theirs, and it survives a re-run via
         <code>findings/overrides.json</code>.
+      </p>
+      <p>
+        <strong>The taxonomy came from the user, not the rubric.</strong> One label,
+        <code>bad_assumption</code>, held 61 episodes — too coarse to tell which rule would
+        prevent what. Hand review of 12 of them named four distinct failures: leaking internal
+        context into external output, trusting dated internal knowledge over what the user had just
+        told us, applying broad patterns that do not fit the situation, and building on premises
+        never checked. Classifying all 61 against those names left <strong>no residue</strong> —
+        every episode fit one of the four. They now stand as separate patterns.
+      </p>
+      <p>
+        <strong>Repeat detection is a finder plus a review, not a pattern match.</strong> Repeats
+        gate the rule bar, and the judges caught only 9. A lexical pass over the user's own words
+        found 36 more candidates — but hand-checking every one of them against the corpus put its
+        precision at <strong>47%</strong>. Half the matches meant the opposite: <em>“I typo'd when
+        i told you to use homebrew”</em> is the user correcting themselves; <em>“Solaar still doesn't
+        show the reciever”</em> is a status report. The user also pointed out that their
+        <em>“We've talked about thhis”</em> only matched because the typo happened to fall outside
+        the matched words. So the pattern was demoted to a finder and a review pass read the full
+        context around each candidate, which handles typos for free by reading meaning. Final
+        count: <strong>15 repeats</strong>, not the 9 the judges found nor the 21 the raw pattern
+        claimed.
       </p>
       <p>
         <strong>Coverage is complete, but four stages needed repair.</strong> The triage model
