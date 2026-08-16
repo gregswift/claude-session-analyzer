@@ -98,9 +98,9 @@ def main():
         seen_ids.add(vid)
         cand = cands.get(vid)
         if not cand:
-            # A verdict for an id that is not a candidate. One triage batch
-            # invented five of these - fabricated ids, not truncation - so this
-            # join is load-bearing, not a formality. Never silent.
+            # A verdict for an id that is not a candidate. A model can emit an
+            # id that was never in its input, so this join is load-bearing
+            # rather than a formality. Never silent.
             orphans += 1
             ghost_ids.append(vid)
             continue

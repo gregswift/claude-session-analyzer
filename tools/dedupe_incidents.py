@@ -50,10 +50,10 @@ def load_repeat_review():
 def assemble_judged():
     """Rebuild the confirmed set from judge_out every time.
 
-    judged.jsonl used to be an intermediate written by rank_findings, which
-    stopped regenerating it once incidents.jsonl existed. That left a stale file
-    holding pre-migration ids, and every one of the user's rulings silently matched
-    nothing. Read the source of truth instead of a cache of it.
+    judge_out is the source of truth. Deriving the confirmed set from a cached
+    intermediate lets a stale file outlive an id change, and stored rulings then
+    match nothing while the run still reports success. Read the source, not a
+    cache of it.
     """
     out_dir = os.path.join(FINDINGS, "judge_out")
     rows, seen = [], set()
@@ -113,12 +113,12 @@ def load_confirmed():
         except ValueError:
             j["turn"] = 0
 
-        # REPEAT_MARKER is a finder, not a verdict. Hand-checking every message
-        # it matched in the corpus put its precision at 47% - half the hits mean
-        # the opposite ("I typo'd when i told you to use homebrew" is the user
-        # correcting themselves). It also only survives typos by luck about where
-        # they land. So matches become candidates, and a review pass reading full
-        # context decides, which handles typos for free by reading meaning.
+        # REPEAT_MARKER is a finder, not a verdict. Lexical matching is
+        # imprecise here: many hits mean the opposite of a repeat ("I typo'd
+        # when i told you to use homebrew" is the user correcting themselves),
+        # and a typo inside the matched words defeats it entirely. So matches
+        # become candidates, and a review pass reading full context decides,
+        # which handles typos for free by reading meaning.
         j["repeat_candidate"] = bool(
             says_repeat(meta.get("prompt")) or says_repeat(j.get("evidence_quote"))
         )
@@ -131,13 +131,11 @@ def load_confirmed():
 def episodes(incidents, gap):
     """Group into episodes. Returns a list of lists.
 
-    Merging is on SHARED QUOTE ONLY. An earlier version also merged incidents
-    that sat close together in one session under the same kind label, on the
-    theory that they were one argument. Measuring the semantic similarity inside
-    those merges killed the theory: 12 of 16 scored between 0.01 and 0.11, i.e.
-    they were unrelated failures that happened to be adjacent and share a label.
-    The user found one by reading it - a diagram misreading merged with an
-    inaccessible-file-path complaint four turns later.
+    Merging is on SHARED QUOTE ONLY. Merging on proximity instead - incidents
+    sitting close together in one session under the same kind label - assumes
+    adjacency means one argument. It does not: unrelated failures routinely
+    happen near each other and share a label, and measuring semantic similarity
+    inside such merges shows most of them share almost no content.
 
     Proximity means two things went wrong near each other, not that one thing
     went wrong. Only an identical quote proves the judges wrote up the same
@@ -201,8 +199,8 @@ def merge(group):
             seen_text.add(key)
             also.append(quote)
         merged["also_said"] = also
-        # Prefer a rule candidate from a repeat member - it is the one the user had
-        # already asked for.
+        # Prefer a rule candidate from a repeat member - it is the one the user
+        # had already asked for.
         repeats = [x for x in group if x.get("repeat_after_instruction")]
         if repeats and not lead.get("repeat_after_instruction"):
             merged["rule_candidate"] = repeats[0].get("rule_candidate") or merged.get(
@@ -238,10 +236,9 @@ def apply_reclassification(incidents):
 def apply_kind_merges(incidents):
     """Collapse labels that name the same failure.
 
-    The user: "Having past stated rules, policies, or questions be ignored is the
-    root of this effort." That is one pattern. It had been split across
-    ignored_instruction and question_ignored, which made the thing they care most
-    about look like two small findings instead of one large one.
+    Two labels naming one failure make it look like two small findings instead
+    of one large one, which changes whether it clears the rule bar. The merges
+    themselves are declared in kind_merges.json.
     """
     path = os.path.join(FINDINGS, "kind_merges.json")
     if not os.path.exists(path):

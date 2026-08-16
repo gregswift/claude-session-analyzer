@@ -176,8 +176,7 @@ def derive_window_start():
 
 def discover_pr_repos():
     """Walk the cwds the sessions ran in, resolve each to a git toplevel, and
-    read its origin. This is the value that used to be hardcoded, so discovery
-    is the default path rather than an afterthought."""
+    read its origin, so the repo list does not have to be typed out by hand."""
     repos = set()
     seen_tops = set()
     for cwd in sorted(_transcript_cwds()):
@@ -321,7 +320,7 @@ def corpus_roots():
     roots = [("local", PROJECTS)]
     extra = list(CONFIG["extra_roots"])
 
-    # Compatibility: the corpus root list used to live in the findings dir.
+    # Also accepted: a corpus_roots.json sitting in the findings directory.
     legacy = os.path.join(FINDINGS, "corpus_roots.json")
     if os.path.exists(legacy):
         with open(legacy) as fh:
@@ -454,11 +453,10 @@ def tool_uses(entry):
             yield block.get("name") or "", block.get("input") or {}
 
 
-# the user saying they already told us. The judges were told to set
-# repeat_after_instruction only when the window proves it, and they read that
-# conservatively - they missed 12 of 21 real repeats, including an explicit
-# "We've talked about thhis." Repeats gate the rule bar, so missing them decides
-# which patterns become rules.
+# The user saying they already told us. Judges instructed to set
+# repeat_after_instruction only when the window proves it read that
+# conservatively and miss real repeats, including ones stated outright. Repeats
+# gate the rule bar, so missing them decides which patterns become rules.
 #
 # Every marker must name a prior communication act or an ongoing failure. Bare
 # "stop" is excluded: "Actually, stop. Give me a synopsis" is abandonment, not
@@ -507,12 +505,10 @@ def strip_trailers(text):
     return "\n".join(kept).strip()
 
 
-# --- compatibility with findings written before the user_* rename -------------
-# Earlier versions of this tool named the person it studies after its author:
-# role "greg", greg_said, what_greg_wanted, greg_note, corrected_by_greg, and
-# greg_review.json. Those names are wrong for a tool anyone can run, so
-# everything is WRITTEN as user_*. An existing findings directory is still READ
-# under the old names, and is never rewritten in place.
+# --- legacy field names -------------------------------------------------------
+# Findings are WRITTEN as user_*. The older key names are still accepted on READ
+# so an existing findings directory keeps loading, and nothing is rewritten in
+# place.
 
 USER_ROLE = "user"
 LEGACY_USER_ROLES = ("user", "greg")
@@ -524,7 +520,7 @@ def is_user_turn(turn):
 
 
 def field(obj, name, *legacy, default=None):
-    """Read a field by its current name, accepting names earlier versions wrote."""
+    """Read a field by its current name, accepting older key names."""
     for key in (name,) + legacy:
         if key in obj:
             return obj[key]
@@ -533,7 +529,7 @@ def field(obj, name, *legacy, default=None):
 
 def findings_path(name, *legacy):
     """Path to a findings file, preferring the current name but falling back to
-    one an earlier version wrote, so old rulings keep loading without migration."""
+    an older one, so stored rulings keep loading without a migration step."""
     current = os.path.join(FINDINGS, name)
     if os.path.exists(current):
         return current

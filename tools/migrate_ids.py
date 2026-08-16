@@ -1,13 +1,13 @@
 """Re-key every stored verdict and ruling onto message-uuid ids.
 
-Incident ids were originally `session:turn-index`. That was a mistake: turn
-indices shift whenever the prompt filter changes. Excluding 65 harness interrupt
-markers renumbered 510 of 1163 ids in one go, orphaning their triage verdicts and
-- far worse - every ruling the user had attached to them.
+Ids keyed on `session:turn-index` are unstable: turn indices shift whenever the
+prompt filter changes, which orphans every triage verdict and every hand-made
+ruling attached to them. Ids are `session:message-uuid`, which nothing can
+renumber.
 
-Ids are now `session:message-uuid`, which nothing can renumber. This maps the old
-ids to the new ones by matching session plus message text, then rewrites the
-stored files in place. Each is backed up alongside with a .preuuid suffix.
+This maps old ids onto new ones by matching session plus message text, then
+rewrites the stored files in place. Each is backed up alongside with a .preuuid
+suffix.
 
 Usage: python3 tools/migrate_ids.py [--dry-run]
 """
@@ -23,15 +23,15 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import FINDINGS  # noqa: E402
 
 # Sources of (old id -> message text). More than one is needed: triaged.jsonl is
-# written after the join, so it has already dropped the very ids the filter change
-# orphaned - the ones most in need of remapping.
+# written after the join, so it has already dropped orphaned ids - the ones most
+# in need of remapping.
 OLD_SOURCES = [
     "/tmp/triaged_oldids.jsonl",
     "/tmp/cand_before.jsonl",
 ]
 
 # Files keyed by incident id. Rulings first - those are the ones that matter.
-# Old name kept so a findings dir written before the rename still migrates.
+# The older name is accepted too.
 ID_KEYED_OBJECTS = ["overrides.json", "user_review.json", "greg_review.json"]
 ID_KEYED_ARRAYS = ["repeat_judged.json", "reclassify_out.json"]
 ID_KEYED_DIRS = ["triage_out", "judge_out"]

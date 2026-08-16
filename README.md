@@ -97,9 +97,6 @@ those batches, not by this repo.
 | `rank_findings.py` | `findings.jsonl`, `report.md` |
 | `build_report.py` | `report.html` |
 
-`migrate_ids.py [--dry-run]` re-keys stored verdicts when the id scheme changes,
-so hand-made rulings survive a pipeline change.
-
 ## Output location
 
 `findings/` is created under the current working directory. Override per-run
@@ -107,14 +104,6 @@ with `--output PATH` (or `-o`), or for a whole shell with `CSA_FINDINGS`.
 
 It contains verbatim excerpts of your sessions, your repos and your own rulings
 on them. It is gitignored here, but treat it as sensitive wherever it lands.
-
-## Reading older findings
-
-Earlier versions of this tool named its fields after its author: role `greg`,
-`greg_said`, `what_greg_wanted`, `greg_note`, `corrected_by_greg`,
-`greg_hand_written` and `greg_review.json`. Everything is written as `user_*`
-now, but those names are still **read** so an existing findings directory keeps
-working. Nothing is rewritten in place and there is no migration to run.
 
 ## Caveats worth knowing
 
