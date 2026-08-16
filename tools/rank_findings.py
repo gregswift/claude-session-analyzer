@@ -148,11 +148,11 @@ def main():
             and fixable_by in ("rule", "hook")
         )
         if ruling == "rule":
-            meets_bar = True
+            meets_bar, decided_by = True, "user"
         elif ruling == "not_a_rule":
-            meets_bar = False
+            meets_bar, decided_by = False, "user"
         else:
-            meets_bar = automatic
+            meets_bar, decided_by = automatic, "evidence"
         patterns.append(
             {
                 "class": klass,
@@ -165,6 +165,7 @@ def main():
                 "score": round(len(items) * statistics.median(severities), 1),
                 "fixable_by": fixable_by,
                 "meets_rule_bar": meets_bar,
+                "decided_by": decided_by,
                 "sources": dict(collections.Counter(i.get("source") for i in items)),
                 "rule_candidates": [
                     r

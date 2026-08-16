@@ -245,7 +245,7 @@
       <div><div class="n">{{TRIAGED}}</div><div class="k">Sent to judging</div></div>
       <div><div class="n">{{RAW}}</div><div class="k">Confirmed</div></div>
       <div><div class="n">{{CONFIRMED}}</div><div class="k">Distinct episodes</div></div>
-      <div><div class="n">{{BAR}}</div><div class="k">Clear the bar</div></div>
+      <div><div class="n">{{BAR}}</div><div class="k">Need a rule</div></div>
     </div>
   </header>
 
@@ -277,8 +277,14 @@
       <h2>Every confirmed incident</h2>
       <p class="prose note">
         {{CONFIRMED}} episodes in {{PATTERNS}} patterns, ordered by episodes × median severity.
-        Bar-clearing patterns are expanded; the rest are collapsed. Within each pattern, repeats
-        come first, then descending severity. Severity is derived only from era-stable signals:
+        Patterns needing a rule are expanded; the rest are collapsed. Within each pattern,
+        noncompliant episodes come first, then descending severity.
+        <strong>Noncompliant</strong> means an instruction already existed and was not followed —
+        said earlier in the session, written into a config or convention, or established in an
+        earlier one. It is narrower than “happened more than once”, and it is what separates a
+        pattern needing a standing rule from one a single correction resolves: if instructions
+        were already in place and were broken anyway, advice has demonstrably failed.
+        Severity is derived only from era-stable signals:
         how long the user sat through before objecting, how much work rested on the mistake,
         whether the thread was abandoned, whether it had already been said. Where one argument
         spans several messages they are merged and tagged <em>“N write-ups, one moment”</em>, with
@@ -422,8 +428,8 @@
         the sub-kinds replace it and the ruling on the parent is inherited by them.
       </p>
       <p>
-        <strong>Repeat detection is a finder plus a review, not a pattern match.</strong> Repeats
-        gate the rule bar, so a missed one changes which patterns become rules. Lexical matching
+        <strong>Noncompliance detection is a finder plus a review, not a pattern match.</strong>
+        It decides which patterns need a rule, so a missed one changes the answer. Lexical matching
         on phrases meaning “I already told you” has poor precision — many matches mean the
         opposite, and a typo defeats character matching outright. So the pattern is a finder only,
         and a review pass reads the full context around each candidate, which handles typos for

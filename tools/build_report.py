@@ -122,9 +122,13 @@ def incident_html(inc, index):
 def pattern_html(pattern, incidents):
     open_attr = " open" if pattern["meets_rule_bar"] else ""
     bar = (
-        '<span class="pill">Clears the bar</span>'
+        (
+            '<span class="pill greg">Rule — your call</span>'
+            if pattern.get("decided_by") == "user"
+            else '<span class="pill">Needs a rule</span>'
+        )
         if pattern["meets_rule_bar"]
-        else '<span class="pill quiet">Below the bar</span>'
+        else '<span class="pill quiet">No rule yet</span>'
     )
     incidents = sorted(
         incidents,
@@ -142,7 +146,7 @@ def pattern_html(pattern, incidents):
         <span class="pat-nums">
           <b>{pattern['incidents']}</b> incidents ·
           <b>{pattern['sessions']}</b> sessions ·
-          <b class="{'hot' if pattern['repeats'] else ''}">{pattern['repeats']}</b> repeats ·
+          <b class="{'hot' if pattern['repeats'] else ''}">{pattern['repeats']}</b> noncompliant ·
           sev <b>{pattern['severity_median']}</b>
         </span>
         {bar}
