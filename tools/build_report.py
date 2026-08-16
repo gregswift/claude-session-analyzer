@@ -178,6 +178,11 @@ def main():
 
     repeats = sum(1 for j in judged if j.get("repeat_after_instruction"))
     shrinks = survival.get("in_session_shrinks", 0)
+    # Bar width from the actual ratio, so a different corpus is not drawn wrong.
+    before_w = survival.get("shrink_words_before_median") or 0
+    after_w = survival.get("shrink_words_after_median") or 0
+    shrink_after_w = (after_w / before_w * 100) if before_w else 0
+    shrink_good = (survival.get("shrink_verdicts_before") or {}).get("good", 0)
 
     interrupts = load("interrupts.jsonl")
     # One outlier spans a resumed session, so its clock covers the gap between
@@ -279,6 +284,11 @@ def main():
         .replace("{{CLAUDE_EMPTY}}", as_pct(claude_p.get("pct_no_body")))
         .replace("{{USER_EMPTY}}", as_pct(user_p.get("pct_no_body")))
         .replace("{{COMMENT_BLOCKS}}", f"{survival.get('authored_blocks', 0):,}")
+        .replace("{{SHRINK_BEFORE}}", str(int(survival.get("shrink_words_before_median") or 0)))
+        .replace("{{SHRINK_AFTER}}", str(int(survival.get("shrink_words_after_median") or 0)))
+        .replace("{{SHRINK_AFTER_W}}", f"{shrink_after_w:.0f}")
+        .replace("{{SHRINK_PCT}}", str(round((survival.get("shrink_chars_median") or 0) * 100)))
+        .replace("{{SHRINK_JUDGED_GOOD}}", str(shrink_good))
         .replace("{{COMMENT_CHECKED}}", f"{checked:,}")
         .replace("{{COMMENT_SURVIVED}}", f"{survived:,}")
         .replace("{{COMMENT_LOST}}", f"{lost:,}")

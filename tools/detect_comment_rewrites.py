@@ -25,6 +25,7 @@ import difflib
 import json
 import os
 import re
+import statistics
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -157,6 +158,20 @@ def main():
         "survival_rate": round(1 - len(gone) / max(1, checked), 3),
         "verdicts_all": dict(verdict_all),
         "verdicts_of_non_survivors": dict(verdict_of_gone),
+        # Aggregates over EVERY shrink, not over the sample below. A median taken
+        # from the ten examples would be a different number wearing the same name.
+        "shrink_words_before_median": (
+            statistics.median(s["before_words"] for s in shrinks) if shrinks else None
+        ),
+        "shrink_words_after_median": (
+            statistics.median(s["after_words"] for s in shrinks) if shrinks else None
+        ),
+        "shrink_chars_median": (
+            round(statistics.median(s["shrink"] for s in shrinks), 3) if shrinks else None
+        ),
+        "shrink_verdicts_before": dict(
+            collections.Counter(s["verdict_before"] for s in shrinks)
+        ),
         "shrink_examples": sorted(shrinks, key=lambda s: -s["shrink"])[:10],
         "non_survivor_examples": gone[:10],
     }

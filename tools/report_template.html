@@ -375,18 +375,23 @@
         </p>
         <div class="chart">
           <div class="row">
-            <div class="rowhead"><span>Still in the file</span><b>{{COMMENT_SURVIVED}}</b></div>
-            <div class="track"><div class="fill me" style="width:{{COMMENT_SURV_W}}%"></div></div>
+            <div class="rowhead"><span>What the model wrote first</span><b>{{SHRINK_BEFORE}} words</b></div>
+            <div class="track"><div class="fill bad" style="width:100%"></div></div>
           </div>
           <div class="row">
-            <div class="rowhead"><span>Changed or gone</span><b>{{COMMENT_LOST}}</b></div>
-            <div class="track"><div class="fill bad" style="width:{{COMMENT_LOST_W}}%"></div></div>
+            <div class="rowhead"><span>What replaced it</span><b>{{SHRINK_AFTER}} words</b></div>
+            <div class="track"><div class="fill me" style="width:{{SHRINK_AFTER_W}}%"></div></div>
+          </div>
+          <div class="row">
+            <div class="rowhead"><span>Still in the file / changed or gone</span><b>{{COMMENT_SURVIVED}} / {{COMMENT_LOST}}</b></div>
+            <div class="track"><div class="fill me" style="width:{{COMMENT_SURV_W}}%"></div></div>
           </div>
         </div>
         <p class="note">
-          A comment the model rewrote itself, or that did not survive contact with the file, is
-          the only comment evidence with ground truth about length. A judged rate has no such
-          anchor.
+          Replaced comments lost <strong>{{SHRINK_PCT}}% of their characters</strong>. These are
+          the only comments with ground truth about length — and the judging rubric called
+          <strong>{{SHRINK_JUDGED_GOOD}} of the {{SHRINKS}}</strong> originals “good”, which is
+          what a judged rate is worth without an anchor.
         </p>
       </div>
     </div>
