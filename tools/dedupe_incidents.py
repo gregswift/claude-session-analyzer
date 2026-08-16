@@ -27,7 +27,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import (  # noqa: E402
     FINDINGS,
     ensure_findings_dir,
-    findings_path,
     says_repeat,
     write_jsonl,
 )
@@ -263,7 +262,7 @@ def apply_user_review(incidents):
     without them commenting, and which ones they have already told Claude about and
     still need an enforced gate rather than another rule.
     """
-    path = findings_path("user_review.json", "greg_review.json")
+    path = os.path.join(FINDINGS, "user_review.json")
     if not os.path.exists(path):
         return 0
     review = {k: v for k, v in json.load(open(path)).items() if not k.startswith("_")}

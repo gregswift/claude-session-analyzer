@@ -16,7 +16,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import CONFIG, HOME, FINDINGS, field  # noqa: E402
+from common import CONFIG, HOME, FINDINGS  # noqa: E402
 
 # Claude encodes a project path as its slashes-to-dashes form. Drop the part
 # that is just the user's home directory, plus anything else the config names.
@@ -86,10 +86,10 @@ def incident_html(inc, index):
             0,
             f'<span class="pill quiet">{occurrences} write-ups, one moment</span>',
         )
-    if field(inc, "corrected_by_user", "corrected_by_greg"):
+    if inc.get("corrected_by_user"):
         flags.insert(0, '<span class="pill user">Corrected by user</span>')
 
-    note = field(inc, "user_note", "greg_note")
+    note = inc.get("user_note")
     user_note = (
         f'<div class="user-note"><b>User correction</b>{esc(note)}</div>'
         if note
@@ -112,7 +112,7 @@ def incident_html(inc, index):
         {also}
         <dl>
           <dt>Claude did</dt><dd>{esc(inc.get('what_claude_did'))}</dd>
-          <dt>User wanted</dt><dd>{esc(field(inc, 'what_user_wanted', 'what_greg_wanted'))}</dd>
+          <dt>User wanted</dt><dd>{esc(inc.get('what_user_wanted'))}</dd>
           <dt>Rule candidate</dt><dd class="rule">{esc(inc.get('rule_candidate')) or '<em>none — not rule-fixable</em>'}</dd>
         </dl>
         {user_note}
@@ -208,15 +208,15 @@ def main():
     candidates = len(load("candidates_transcripts.jsonl")) + len(load("candidates_chat.jsonl"))
     triaged_out = len(load("judged.jsonl"))
 
-    def profile(*labels):
-        """Style profile by label, accepting the pre-rename name."""
-        for want in labels:
-            for prof in style.get("profiles", []):
-                if prof.get("label") == want:
-                    return prof
+    def profile(label):
+        """Style profile by label. Looked up by name, never by list position -
+        the order the profiles are written in is not part of the contract."""
+        for prof in style.get("profiles", []):
+            if prof.get("label") == label:
+                return prof
         return {}
 
-    user_p = profile("user_hand_written", "greg_hand_written")
+    user_p = profile("user_hand_written")
     claude_p = profile("claude_co_authored")
     other_p = profile("other_humans_same_repos")
 

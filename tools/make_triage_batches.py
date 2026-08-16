@@ -15,7 +15,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS, ensure_findings_dir, is_user_turn  # noqa: E402
+from common import (  # noqa: E402
+    FINDINGS,
+    ensure_findings_dir,
+    is_user_turn,
+    positional_args,
+)
 
 PROMPT_CLIP = 1400
 BEFORE_CLIP = 900
@@ -85,7 +90,8 @@ def already_triaged():
 
 
 def main():
-    batch_size = int(sys.argv[1]) if len(sys.argv) > 1 else 60
+    args = positional_args()
+    batch_size = int(args[0]) if args else 60
     incremental = "--new-only" in sys.argv
     ensure_findings_dir()
     out_dir = os.path.join(FINDINGS, "triage_in")

@@ -10,11 +10,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS, ensure_findings_dir  # noqa: E402
+from common import FINDINGS, ensure_findings_dir, positional_args  # noqa: E402
 
 
 def main():
-    size = int(sys.argv[1]) if len(sys.argv) > 1 else 110
+    args = positional_args()
+    size = int(args[0]) if args else 110
     ensure_findings_dir()
     rows = [
         {

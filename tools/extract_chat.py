@@ -19,6 +19,7 @@ from common import (  # noqa: E402
     PROFANITY,
     USER_ROLE,
     ensure_findings_dir,
+    positional_args,
     is_user_turn,
     write_jsonl,
 )
@@ -55,9 +56,10 @@ def flags_for(text, out_size):
 
 
 def main():
-    if len(sys.argv) < 2:
+    args = positional_args()
+    if not args:
         sys.exit("usage: extract_chat.py <unzipped-export-dir>")
-    export = sys.argv[1]
+    export = args[0]
     with open(os.path.join(export, "conversations.json")) as fh:
         convs = json.load(fh)
 

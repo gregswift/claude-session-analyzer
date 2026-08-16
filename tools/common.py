@@ -23,6 +23,31 @@ def _output_arg():
     return _flag_arg("--output", "-o")
 
 
+# Flags that consume the argument after them, so positional_args does not
+# mistake a flag's value for a positional.
+_VALUE_FLAGS = ("--output", "-o", "--config", "--gap", "--min-confidence")
+
+
+def positional_args():
+    """argv entries that are neither a flag nor a flag's value.
+
+    Tools taking a positional argument have to skip past the shared flags, or
+    `tool.py --output DIR` reads "--output" as the positional.
+    """
+    found, skip = [], False
+    for arg in sys.argv[1:]:
+        if skip:
+            skip = False
+            continue
+        if arg in _VALUE_FLAGS:
+            skip = True
+            continue
+        if arg.startswith("-"):
+            continue
+        found.append(arg)
+    return found
+
+
 # Findings are generated output: they land under the working directory unless
 # told otherwise, never next to the code. Precedence: --output, then
 # CSA_FINDINGS, then ./findings.
@@ -505,40 +530,12 @@ def strip_trailers(text):
     return "\n".join(kept).strip()
 
 
-# --- legacy field names -------------------------------------------------------
-# Findings are WRITTEN as user_*. The older key names are still accepted on READ
-# so an existing findings directory keeps loading, and nothing is rewritten in
-# place.
-
 USER_ROLE = "user"
-LEGACY_USER_ROLES = ("user", "greg")
 
 
 def is_user_turn(turn):
-    """True for a turn the person typed, under either the current or old role."""
-    return turn.get("role") in LEGACY_USER_ROLES
-
-
-def field(obj, name, *legacy, default=None):
-    """Read a field by its current name, accepting older key names."""
-    for key in (name,) + legacy:
-        if key in obj:
-            return obj[key]
-    return default
-
-
-def findings_path(name, *legacy):
-    """Path to a findings file, preferring the current name but falling back to
-    an older one, so stored rulings keep loading without a migration step."""
-    current = os.path.join(FINDINGS, name)
-    if os.path.exists(current):
-        return current
-    for old in legacy:
-        candidate = os.path.join(FINDINGS, old)
-        if os.path.exists(candidate):
-            print(f"  reading legacy {old} (writing {name} from now on)")
-            return candidate
-    return current
+    """True for a turn the person typed, as opposed to the assistant."""
+    return turn.get("role") == USER_ROLE
 
 
 def ensure_findings_dir():
