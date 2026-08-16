@@ -119,7 +119,7 @@ def incident_html(inc, index):
       </article>"""
 
 
-def pattern_html(pattern, incidents):
+def pattern_html(pattern, incidents, problems_by_kind):
     open_attr = " open" if pattern["meets_rule_bar"] else ""
     bar = (
         (
@@ -137,7 +137,60 @@ def pattern_html(pattern, incidents):
             -float(i.get("severity") or 0),
         ),
     )
-    body = "".join(incident_html(inc, n + 1) for n, inc in enumerate(incidents))
+    ordered = list(enumerate(incidents, start=1))
+    problems = sorted(
+        problems_by_kind.get(pattern["kind"], []),
+        key=lambda p: (-p["episodes"], -p["severity_median"]),
+    )
+    by_id = {inc["id"]: n for n, inc in ordered}
+
+    blocks = []
+    placed = set()
+    for prob in problems:
+        members = [
+            (by_id[i], inc)
+            for i in prob["episode_ids"]
+            for n, inc in ordered
+            if inc["id"] == i and n == by_id[i]
+        ]
+        if not members:
+            continue
+        placed.update(n for n, _ in members)
+        qualifies = (
+            prob["episodes"] >= 2 and prob["noncompliant"] >= 1 and bool(prob["rule"])
+        )
+        chips = []
+        if prob["episodes"] > 1:
+            chips.append(f'<span class="pill quiet">{prob["episodes"]} episodes</span>')
+        if prob["noncompliant"]:
+            chips.append(f'<span class="pill flag">{prob["noncompliant"]} noncompliant</span>')
+        if qualifies:
+            chips.append('<span class="pill">Rule</span>')
+        rule = (
+            f'<p class="prob-rule">{esc(prob["rule"])}</p>' if prob["rule"] else ""
+        )
+        inner = "".join(incident_html(inc, n) for n, inc in members)
+        blocks.append(
+            f'''
+      <section class="prob{' qualifies' if qualifies else ''}">
+        <div class="prob-head">
+          <span class="prob-name">{esc(prob["name"])}</span>
+          <span class="prob-chips">{''.join(chips)}</span>
+        </div>
+        {rule}
+        {inner}
+      </section>'''
+        )
+
+    leftovers = [(n, inc) for n, inc in ordered if n not in placed]
+    if leftovers:
+        blocks.append(
+            '<section class="prob"><div class="prob-head">'
+            '<span class="prob-name">not yet grouped</span></div>'
+            + "".join(incident_html(inc, n) for n, inc in leftovers)
+            + "</section>"
+        )
+    body = "".join(blocks)
     return f"""
     <details class="pat{' barred' if pattern['meets_rule_bar'] else ''}"{open_attr}>
       <summary>
@@ -146,6 +199,7 @@ def pattern_html(pattern, incidents):
         <span class="pat-nums">
           <b>{pattern['incidents']}</b> incidents ·
           <b>{pattern['sessions']}</b> sessions ·
+          <b>{pattern.get('problems', 0)}</b> problems ·
           <b class="{'hot' if pattern['repeats'] else ''}">{pattern['repeats']}</b> noncompliant ·
           sev <b>{pattern['severity_median']}</b>
         </span>
@@ -172,8 +226,12 @@ def main():
     for j in judged:
         by_pattern[(j.get("class", "A"), j.get("kind", "other"))].append(j)
 
+    problems_by_kind = collections.defaultdict(list)
+    for row in load("problems.jsonl"):
+        problems_by_kind[row["kind"]].append(row)
+
     sections = "".join(
-        pattern_html(p, by_pattern[(p["class"], p["kind"])]) for p in patterns
+        pattern_html(p, by_pattern[(p["class"], p["kind"])], problems_by_kind) for p in patterns
     )
 
     repeats = sum(1 for j in judged if j.get("repeat_after_instruction"))

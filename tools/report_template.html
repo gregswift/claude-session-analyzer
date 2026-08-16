@@ -131,6 +131,23 @@
     display: flex; flex-direction: column;
   }
 
+  /* ---- problems: the unit a rule attaches to ---- */
+  .prob {
+    border-left: 2px solid var(--rule); padding-left: 0.9rem;
+    margin: 0.9rem 0 0.2rem; display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .prob.qualifies { border-left-color: var(--accent); }
+  .prob-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.8rem; }
+  .prob-name {
+    font-family: var(--mono); font-size: 0.86rem; color: var(--ink);
+  }
+  .prob-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
+  .prob-rule {
+    margin: 0; padding: 0.55rem 0.85rem; background: var(--accent-soft);
+    color: var(--ink); font-size: 0.92rem; border-radius: 2px;
+  }
+  .prob .inc { border-bottom: none; padding: 0.75rem 0 0.2rem; }
+
   /* ---- individual incidents ---- */
   .inc { border-bottom: 1px solid var(--rule); padding: 1.15rem 0; display: flex; flex-direction: column; gap: 0.7rem; }
   .inc:last-child { border-bottom: none; padding-bottom: 0.2rem; }

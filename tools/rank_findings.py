@@ -124,6 +124,22 @@ def main():
         if forced:
             print(f"the user's rulings force in: {', '.join(sorted(forced))}")
 
+    # Problems are the unit a rule attaches to. A kind is a category and has no
+    # checkable action in it, so a threshold applied to a kind counts volume the
+    # kind does not really have: 26 episodes of 18 unrelated problems is not one
+    # failure happening 26 times.
+    problems_path = os.path.join(FINDINGS, "problems.jsonl")
+    problems_by_kind = collections.defaultdict(list)
+    if os.path.exists(problems_path):
+        for line in open(problems_path):
+            row = json.loads(line)
+            row["needs_rule"] = (
+                row["episodes"] >= MIN_INCIDENTS
+                and row["noncompliant"] >= 1
+                and bool(row.get("rule"))
+            )
+            problems_by_kind[row["kind"]].append(row)
+
     clusters = collections.defaultdict(list)
     for j in judged:
         clusters[(j.get("class", "A"), j.get("kind", "other"))].append(j)
@@ -142,10 +158,18 @@ def main():
         # they have forced in was rejected only for lacking a repeat - which means
         # only that they never had to say it twice.
         ruling = decisions.get(kind, {}).get("decision")
+        kind_problems = problems_by_kind.get(kind, [])
+        qualifying = [p for p in kind_problems if p["needs_rule"]]
+        # A kind qualifies when one of ITS PROBLEMS does, not on its own volume.
+        # Without a grouping pass, fall back to counting episodes in the kind.
         automatic = (
-            len(items) >= MIN_INCIDENTS
-            and len(repeats) >= 1
-            and fixable_by in ("rule", "hook")
+            bool(qualifying)
+            if kind_problems
+            else (
+                len(items) >= MIN_INCIDENTS
+                and len(repeats) >= 1
+                and fixable_by in ("rule", "hook")
+            )
         )
         if ruling == "rule":
             meets_bar, decided_by = True, "user"
@@ -166,6 +190,9 @@ def main():
                 "fixable_by": fixable_by,
                 "meets_rule_bar": meets_bar,
                 "decided_by": decided_by,
+                "problems": len(kind_problems),
+                "recurring_problems": sum(1 for p in kind_problems if p["episodes"] > 1),
+                "problems_needing_rule": len(qualifying),
                 "sources": dict(collections.Counter(i.get("source") for i in items)),
                 "rule_candidates": [
                     r
