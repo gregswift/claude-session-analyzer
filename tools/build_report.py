@@ -88,6 +88,8 @@ def incident_html(inc, index):
         )
     if inc.get("corrected_by_user"):
         flags.insert(0, '<span class="pill user">Corrected by user</span>')
+    if inc.get("preference_only"):
+        flags.insert(0, '<span class="pill user">Preference — no complaint</span>')
 
     note = inc.get("user_note")
     user_note = (

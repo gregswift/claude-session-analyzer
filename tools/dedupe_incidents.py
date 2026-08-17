@@ -305,9 +305,18 @@ def apply_overrides(incidents):
         if not patch.get("_standalone"):
             continue
         row = {k: v for k, v in patch.items() if k != "_standalone"}
-        row.update({"id": key, "confirmed": True, "corrected_by_user": True,
-                    "merged_ids": [key], "source": "user", "confidence": 1.0})
+        row.update({"id": key, "confirmed": True, "merged_ids": [key],
+                    "confidence": 1.0})
+        row.setdefault("source", "user")
         row.setdefault("occurrences", 1)
+        # A standalone arrives one of two ways, and they are not the same claim.
+        # `correction` means the user pushed back and the rule followed; the
+        # 1Password one did. `preference` means they asked for it with nothing in
+        # the corpus behind it. Marking the second as a correction would put words
+        # in their mouth, in a report whose whole point is quoting them exactly.
+        origin = row.pop("origin", "correction")
+        row["corrected_by_user"] = origin == "correction"
+        row["preference_only"] = origin == "preference"
         incidents.append(row)
         applied += 1
 
