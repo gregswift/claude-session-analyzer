@@ -29,6 +29,8 @@ STAGES = [
     ("style_comparison.json", ["git_landed.jsonl"], "compare_style.py"),
     ("rewrites.jsonl", ["artifacts_authored.jsonl", "git_landed.jsonl", "prs.jsonl"], "match_rewrites.py"),
     ("comment_survival.json", ["code_comments.jsonl"], "detect_comment_rewrites.py"),
+    ("reversals.json", ["git_landed.jsonl", "artifacts_authored.jsonl",
+                        "code_comments.jsonl"], "detect_reversals.py"),
     ("comment_summary.json", ["code_comments.jsonl"], "summarize_comments.py"),
     ("triaged.jsonl", ["candidates_transcripts.jsonl", "candidates_chat.jsonl"], "merge_triage.py"),
     ("incidents.jsonl", ["triaged.jsonl"], "dedupe_incidents.py"),
@@ -38,7 +40,7 @@ STAGES = [
     ("behaviors.jsonl", ["behavior_in/all.json"], "merge_behaviors.py"),
     ("report.html", ["findings.jsonl", "problems.jsonl", "behaviors.jsonl",
                      "style_comparison.json", "comment_survival.json",
-                     "interrupts.jsonl"], "build_report.py"),
+                     "reversals.json", "interrupts.jsonl"], "build_report.py"),
 ]
 
 # Directories of model verdicts. Newer verdicts than the merge that reads them is

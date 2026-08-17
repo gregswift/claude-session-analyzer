@@ -371,6 +371,17 @@ def main():
     def as_pct(value):
         return f"{round((value or 0) * 100)}%"
 
+    reversals = load("reversals.json", jsonl=False).get("corpora", {})
+
+    def rev(key, field):
+        return (reversals.get(key) or {}).get(field) or 0
+
+    # Real hits, quoted verbatim. A rate with no examples under it cannot be
+    # argued with, and this one is a judgement call about writing.
+    rev_samples = "".join(
+        f"<q>{esc(s)}</q>" for s in (rev("chat_prose", "samples") or [])[:5]
+    )
+
     checked = survival.get("checked_against_worktree", 0)
     lost = survival.get("did_not_survive", 0)
     survived = max(0, checked - lost)
@@ -429,6 +440,14 @@ def main():
         .replace("{{COMMENT_SURV_W}}", str(max(1, round(100 * survived / widest_c))))
         .replace("{{COMMENT_LOST_W}}", str(max(1, round(100 * lost / widest_c))))
         .replace("{{RATIO}}", str(style.get("ratios", {}).get("body_chars_median", "")))
+        .replace("{{REV_CHAT}}", str(rev("chat_prose", "hits")))
+        .replace("{{REV_CHAT_N}}", f'{rev("chat_prose", "examined"):,}')
+        .replace("{{REV_CHAT_PCT}}", f'{100 * rev("chat_prose", "rate"):.1f}')
+        .replace("{{REV_ARTIFACTS}}", str(rev("authored_artifacts", "hits")))
+        .replace("{{REV_ARTIFACTS_N}}", f'{rev("authored_artifacts", "examined"):,}')
+        .replace("{{REV_USER}}", str(rev("user_commits", "hits")))
+        .replace("{{REV_USER_N}}", str(rev("user_commits", "examined")))
+        .replace("{{REV_SAMPLES}}", rev_samples)
     )
 
     out = os.path.join(FINDINGS, "report.html")
