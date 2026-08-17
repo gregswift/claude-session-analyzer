@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from common import (  # noqa: E402
     FINDINGS,
+    extendable_pattern,
     artifacts_allowed,
     ensure_findings_dir,
     iter_transcripts,
@@ -41,12 +42,20 @@ LINE_COMMENT = {
     ".proto": "//", ".jsonnet": "//",
 }
 
-SKIP_PATTERNS = re.compile(
-    r"^\s*(#!|#\s*-\*-|//\s*(eslint|@ts-|prettier|nolint|go:generate|Code generated)"
-    r"|#\s*(noqa|type:|pylint|fmt:|yamllint|nosec)"
-    r"|#\s*(TODO\(|FIXME\()"
-    r"|#{3,}|/{3,})",
-    re.I,
+# Machine directives rather than prose - nothing here was written to be read.
+# Which directives exist depends on the stack, so this is extendable from the
+# config with `extra_comment_skip`.
+SKIP_PATTERNS = extendable_pattern(
+    "comment_skip",
+    r"^\s*(",
+    [
+        "#!", r"#\s*-\*-",
+        r"//\s*(eslint|@ts-|prettier|nolint|go:generate|Code generated)",
+        r"#\s*(noqa|type:|pylint|fmt:|yamllint|nosec)",
+        r"#\s*(TODO\(|FIXME\()",
+        r"#{3,}", r"/{3,}",
+    ],
+    r")",
 )
 
 CONTEXT = 4  # code lines after the comment, enough to judge what-vs-why

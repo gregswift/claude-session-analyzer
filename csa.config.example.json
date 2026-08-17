@@ -12,5 +12,14 @@
   "excluded_sessions": [],
   "excluded_project_substrings": [],
   "artifact_excluded_projects": [],
-  "project_label_strip": []
+  "project_label_strip": [],
+
+  "_language_comment": "The built-in patterns match how one person writes in English when annoyed. Each list below ADDS alternatives and never replaces the built-ins. Entries are literal phrases and are escaped for you; prefix an entry with 're:' to supply a raw regex fragment instead. A literal is bounded so it will not fire inside a longer word.",
+
+  "extra_profanity": ["bruh", "yikes"],
+  "extra_negation_lead": ["hold on", "back up"],
+  "extra_correction_phrase": ["you're doing it again", "re:i (have )?repeatedly"],
+  "extra_repeat_marker": ["for the third time", "re:how many (more )?times"],
+  "extra_commit_trailers": ["Change-Id", "Reviewed-by"],
+  "extra_comment_skip": ["// biome-ignore", "re:#\\s*ruff:"]
 }

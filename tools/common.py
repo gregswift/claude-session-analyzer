@@ -89,6 +89,15 @@ CONFIG_DEFAULTS = {
     "excluded_project_substrings": [],
     "artifact_excluded_projects": [],
     "project_label_strip": [],
+    # Extra alternatives for the language patterns further down. Each list adds
+    # to the built-in terms and never replaces them. Entries are literal phrases
+    # unless prefixed `re:`.
+    "extra_profanity": [],
+    "extra_negation_lead": [],
+    "extra_correction_phrase": [],
+    "extra_repeat_marker": [],
+    "extra_commit_trailers": [],
+    "extra_comment_skip": [],
 }
 
 
@@ -311,27 +320,83 @@ def artifacts_allowed(project):
 def window_start():
     return config_required("window_start")
 
-PROFANITY = re.compile(
-    r"\b(fuck\w*|shit\w*|wtf|ffs|wth|goddamn\w*|dammit|damn it|bullshit"
-    r"|ugh|argh|christ|jesus|seriously|for the love of)\b",
-    re.I,
+# --- language patterns ------------------------------------------------------
+# These match how ONE person writes when they are annoyed, in English. They are
+# finders: their hits get reviewed, never treated as verdicts. Everyone's
+# phrasings differ, so every one of them can be extended from the config file
+# with an `extra_<name>` list - see csa.config.example.json.
+#
+# Entries are literal phrases by default and are escaped for you. Prefix an
+# entry with `re:` to supply a raw regex fragment instead. Extending only adds
+# alternatives; the built-in terms always stay in.
+
+
+def _term(name, entry):
+    """One config entry as a regex fragment."""
+    if not isinstance(entry, str) or not entry.strip():
+        raise SystemExit(f"ERROR: extra_{name}: entries must be non-empty strings")
+    if entry.startswith("re:"):
+        fragment = entry[3:]
+        try:
+            re.compile(fragment)
+        except re.error as exc:
+            raise SystemExit(f"ERROR: extra_{name}: bad regex {entry!r} - {exc}")
+        return fragment
+    # A literal phrase should not fire inside a longer word, so bound whichever
+    # ends are word characters. Doubling a boundary the outer pattern already
+    # supplies is harmless.
+    fragment = re.escape(entry)
+    if entry[0].isalnum():
+        fragment = r"\b" + fragment
+    if entry[-1].isalnum():
+        fragment = fragment + r"\b"
+    return fragment
+
+
+def extendable_pattern(name, prefix, terms, suffix, flags=re.I):
+    extra = CONFIG.get(f"extra_{name}") or []
+    if isinstance(extra, str):
+        extra = [extra]
+    joined = "|".join(list(terms) + [_term(name, e) for e in extra])
+    return re.compile(prefix + joined + suffix, flags)
+
+
+PROFANITY = extendable_pattern(
+    "profanity",
+    r"\b(",
+    [
+        r"fuck\w*", r"shit\w*", "wtf", "ffs", "wth", r"goddamn\w*", "dammit",
+        "damn it", "bullshit", "ugh", "argh", "christ", "jesus", "seriously",
+        "for the love of",
+    ],
+    r")\b",
 )
 
-NEGATION_LEAD = re.compile(
-    r"^\W*(no\b|nope|nah|wrong|stop\b|don'?t\b|do not\b|that'?s not|thats not"
-    r"|why (did|are|is|would|the)|i (told|asked|said|already)|you (did|keep|still|again)"
-    r"|again\b|not what|never mind|nevermind|revert|undo)",
-    re.I,
+NEGATION_LEAD = extendable_pattern(
+    "negation_lead",
+    r"^\W*(",
+    [
+        r"no\b", "nope", "nah", "wrong", r"stop\b", r"don'?t\b", r"do not\b",
+        r"that'?s not", "thats not", "why (did|are|is|would|the)",
+        "i (told|asked|said|already)", "you (did|keep|still|again)",
+        r"again\b", "not what", "never mind", "nevermind", "revert", "undo",
+    ],
+    r")",
 )
 
-CORRECTION_PHRASE = re.compile(
-    r"(i (told|asked) you|i already (said|told)|you (keep|still|again)"
-    r"|stop doing|don'?t do that|that'?s not what|thats not what"
-    r"|why did you|you were told|as i said|like i said|i said\b"
-    r"|you ignored|you didn'?t|you did not|not what i (asked|wanted|said)"
-    r"|read (the|my) (instruction|prompt|request)|scope creep|over ?engineer"
-    r"|too (verbose|long|much)|i didn'?t ask)",
-    re.I,
+CORRECTION_PHRASE = extendable_pattern(
+    "correction_phrase",
+    r"(",
+    [
+        "i (told|asked) you", "i already (said|told)", "you (keep|still|again)",
+        "stop doing", r"don'?t do that", r"that'?s not what", "thats not what",
+        "why did you", "you were told", "as i said", "like i said", r"i said\b",
+        "you ignored", r"you didn'?t", "you did not",
+        "not what i (asked|wanted|said)",
+        "read (the|my) (instruction|prompt|request)", "scope creep",
+        "over ?engineer", "too (verbose|long|much)", r"i didn'?t ask",
+    ],
+    r")",
 )
 
 
@@ -486,28 +551,33 @@ def tool_uses(entry):
 # Every marker must name a prior communication act or an ongoing failure. Bare
 # "stop" is excluded: "Actually, stop. Give me a synopsis" is abandonment, not
 # repetition.
-REPEAT_MARKER = re.compile(
-    r"("
-    r"we[' ]?ve (talked|discussed|been over)"
-    r"|we (talked|discussed) about (this|that|it)"
-    # "i asked you" is a complaint; "what i asked for" is a noun phrase. Require
-    # the addressee for told/asked, and keep the intransitive verbs separate.
-    r"|\bi (already |just )?(told|asked) you\b"
-    r"|\bi (already |just )?(said|mentioned|explained|stated)\b"
-    r"|which is why i said"
-    r"|as i (said|asked|mentioned|explained)|like i said"
-    # Must be a complaint, not a reference. "a synopsis of what i asked for" is
-    # a request; "that isnt what i asked for" is the user repeating themselves.
-    r"|(that|this) (is|isn'?t|'?s not) what i asked"
-    r"|not what i (asked|wanted|said)"
-    r"|you keep\b|you (still|continue to)\b|still (do not|don'?t|doesn'?t|not)\b"
-    r"|stop referencing|stop (doing|trying|using)"
-    r"|i'?ve (said|told|asked)"
-    r"|per (my|our) (earlier|previous|last)"
-    r"|(said|told|asked|mentioned) (you |this |that )?(before|earlier|already)"
-    r"|how many times"
+REPEAT_MARKER = extendable_pattern(
+    "repeat_marker",
+    r"(",
+    [
+        "we[' ]?ve (talked|discussed|been over)",
+        "we (talked|discussed) about (this|that|it)",
+        # "i asked you" is a complaint; "what i asked for" is a noun phrase.
+        # Require the addressee for told/asked, and keep the intransitive verbs
+        # separate.
+        r"\bi (already |just )?(told|asked) you\b",
+        r"\bi (already |just )?(said|mentioned|explained|stated)\b",
+        "which is why i said",
+        "as i (said|asked|mentioned|explained)", "like i said",
+        # Must be a complaint, not a reference. "a synopsis of what i asked for"
+        # is a request; "that isnt what i asked for" is the user repeating
+        # themselves.
+        r"(that|this) (is|isn'?t|'?s not) what i asked",
+        "not what i (asked|wanted|said)",
+        r"you keep\b", r"you (still|continue to)\b",
+        r"still (do not|don'?t|doesn'?t|not)\b",
+        "stop referencing", "stop (doing|trying|using)",
+        r"i'?ve (said|told|asked)",
+        "per (my|our) (earlier|previous|last)",
+        "(said|told|asked|mentioned) (you |this |that )?(before|earlier|already)",
+        "how many times",
+    ],
     r")",
-    re.I,
 )
 
 
@@ -516,10 +586,16 @@ def says_repeat(text):
     return bool(REPEAT_MARKER.search(text or ""))
 
 
-TRAILER = re.compile(
-    r"^\s*(Co-Authored-By|Co-authored-by|Claude-Session|Generated with|Signed-off-by"
-    r"|https://claude\.ai/code|🤖)",
-    re.I,
+# Not user language: lines a tool appends to every commit. Extendable all the
+# same, because which tools append what differs per setup (Change-Id, Reviewed-by).
+TRAILER = extendable_pattern(
+    "commit_trailers",
+    r"^\s*(",
+    [
+        "Co-Authored-By", "Co-authored-by", "Claude-Session", "Generated with",
+        "Signed-off-by", r"https://claude\.ai/code", "🤖",
+    ],
+    r")",
 )
 
 

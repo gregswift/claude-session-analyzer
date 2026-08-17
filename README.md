@@ -135,14 +135,38 @@ with `--output PATH` (or `-o`), or for a whole shell with `CSA_FINDINGS`.
 It contains verbatim excerpts of your sessions, your repos and your own rulings
 on them. It is gitignored here, but treat it as sensitive wherever it lands.
 
+## Tuning the language patterns
+
+Six patterns match text rather than structure. Four are how one person writes in
+English when they are annoyed; two are lines that tooling appends. All of them
+are **finders** — their hits get reviewed, never treated as verdicts — and all of
+them can be extended from the config:
+
+| Config key | Extends | Matches |
+| --- | --- | --- |
+| `extra_profanity` | `PROFANITY` | swearing and exasperation |
+| `extra_negation_lead` | `NEGATION_LEAD` | a message that opens with a correction |
+| `extra_correction_phrase` | `CORRECTION_PHRASE` | a correction anywhere in the message |
+| `extra_repeat_marker` | `REPEAT_MARKER` | "I already told you" — this one gates the rule bar |
+| `extra_commit_trailers` | `TRAILER` | trailers stripped before commits are compared |
+| `extra_comment_skip` | `SKIP_PATTERNS` | machine directives that are not prose |
+
+Each list **adds** alternatives; the built-in terms always stay in. Entries are
+literal phrases and are escaped for you, bounded so they will not fire inside a
+longer word. Prefix an entry with `re:` for a raw regex fragment. A bad regex or
+an empty entry stops the run and names the key it came from, rather than
+silently matching nothing.
+
+`extra_repeat_marker` is the one worth spending time on. Whether a failure counts
+as noncompliant — an instruction already existed and was broken anyway — is what
+separates a pattern that needs a standing rule from one a single correction
+fixes. Miss the way you phrase "I already told you" and those failures rank as
+first offences.
+
 ## Caveats worth knowing
 
-Two things in here are tuned to one corpus rather than being general truths, and
-they are marked as such in the source:
-
-- `REPEAT_MARKER` in `common.py` matches English phrasings meaning "I already
-  told you". It is a finder whose hits are meant to be reviewed, not a
-  measurement. Your phrasings will differ.
+- The patterns above are finders, not measurements. Precision was hand-checked
+  once at 47% on one corpus, which is why every hit goes to review.
 - Everything derived from complaints undercounts failures you absorbed silently.
   The interrupt and comment-survival signals exist because they need no
   complaint to fire.
