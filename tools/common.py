@@ -106,7 +106,6 @@ PATTERN_NAMES = (
     "repeat_marker",       # "I already told you" - this one gates the rule bar
     "commit_trailers",     # tool-appended lines, stripped before comparing
     "comment_skip",        # machine directives in code, which are not prose
-    "reversal",            # "it's not X, it's Y" in the model's own prose
 )
 
 

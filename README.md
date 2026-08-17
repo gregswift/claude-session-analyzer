@@ -79,7 +79,6 @@ those batches, not by this repo.
 | `match_rewrites.py` | `rewrites.jsonl` |
 | `compare_style.py` | `style_comparison.json` |
 | `detect_comment_rewrites.py` | `comment_survival.json` |
-| `detect_reversals.py` | `reversals.json` |
 
 **Judge** — batch out for classification, then merge the verdicts back.
 
@@ -138,9 +137,8 @@ on them. It is gitignored here, but treat it as sensitive wherever it lands.
 
 ## Tuning the language patterns
 
-Seven patterns match text rather than structure. Four are how one person writes
-in English when they are annoyed; two are lines that tooling appends; one is a
-tic in the model's own writing. All are
+Six patterns match text rather than structure. Four are how one person writes in
+English when they are annoyed; two are lines that tooling appends. All are
 **finders** — their hits get reviewed, never treated as verdicts — and all take
 extra terms from a single `extra_patterns` object:
 
@@ -159,7 +157,6 @@ extra terms from a single `extra_patterns` object:
 | `repeat_marker` | "I already told you" — this one gates the rule bar |
 | `commit_trailers` | trailers stripped before commits are compared |
 | `comment_skip` | machine directives in code, which are not prose |
-| `reversal` | "it's not X, it's Y" in the model's own prose |
 
 Each list **adds** alternatives; the built-in terms always stay in. Entries are
 literal phrases and are escaped for you, bounded so they will not fire inside a

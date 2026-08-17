@@ -287,12 +287,6 @@
   .fill.me { background: var(--bar-a); }
   .fill.bad { background: var(--flag); }
 
-  .revsamples { display: flex; flex-direction: column; gap: 0.4rem; }
-  .revsamples q {
-    font-family: var(--serif); font-size: 0.88rem; color: var(--ink-2);
-    border-left: 2px solid var(--rule-strong); padding-left: 0.7rem; quotes: none;
-  }
-
   .callout {
     background: var(--surface); border: 1px solid var(--rule);
     border-top: 3px solid var(--flag); border-radius: 3px; padding: 1.3rem 1.5rem;
@@ -505,42 +499,6 @@
         </p>
       </div>
 
-      <div class="panel">
-        <h3>“It’s not X, it’s Y”</h3>
-        <p class="note">
-          A rhetorical tic in Claude’s own prose: setting up a wrong answer in order to knock it
-          down. It drew <strong>no complaints at all</strong>, so nothing built on corrections
-          could ever have found it — which is the whole reason the signals in this section exist.
-        </p>
-        <div class="chart">
-          <div class="row">
-            <div class="rowhead"><span>Chat turns</span><b>{{REV_CHAT}} of {{REV_CHAT_N}} · {{REV_CHAT_PCT}}%</b></div>
-            <div class="track"><div class="fill bad" style="width:100%"></div></div>
-          </div>
-          <div class="row">
-            <div class="rowhead"><span>Commit and PR bodies</span><b>{{REV_ARTIFACTS}} of {{REV_ARTIFACTS_N}}</b></div>
-            <div class="track"><div class="fill me" style="width:1%"></div></div>
-          </div>
-          <div class="row">
-            <div class="rowhead"><span>The user’s own commits</span><b>{{REV_USER}} of {{REV_USER_N}}</b></div>
-            <div class="track"><div class="fill me" style="width:1%"></div></div>
-          </div>
-        </div>
-        <p class="note">Hits as matched, in corpus order and unfiltered — misfires
-        included, because a rate is worth less than the chance to judge it yourself.</p>
-        <div class="revsamples">{{REV_SAMPLES}}</div>
-        <p class="note">
-          Matching needs a copula on <em>both</em> sides of the contrast. The broad form — any
-          “X, not Y” — hits <strong>12.1%</strong> of turns but reads at roughly
-          <strong>20% precision</strong> by hand: most of those name the rejected option because
-          that is what makes the sentence useful (<em>“the type is <code>promql</code>, not
-          <code>promql_query</code>”</em>). The narrow form hand-checks at about
-          <strong>75%</strong>. Not a paraprosdokian, which would need its tail to reframe its
-          head; no paraprosdokians were found, and finding them would take a judge rather than a
-          pattern. The control is only {{REV_USER_N}} commits long enough to carry the figure, so
-          read its zero as weak.
-        </p>
-      </div>
     </div>
   </section>
 
