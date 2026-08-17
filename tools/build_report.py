@@ -119,6 +119,48 @@ def incident_html(inc, index):
       </article>"""
 
 
+def behaviour_html(beh, candidates):
+    """One standing rule, with the problem rules it generalises kept underneath.
+
+    The examples stay visible because a rule with no evidence under it cannot be
+    argued with - and arguing with them is the point of the review.
+    """
+    nums = [
+        f'<span><b>{beh["episodes"]}</b> episodes</span>',
+        f'<span><b class="{"hot" if beh["noncompliant"] else ""}">'
+        f'{beh["noncompliant"]}</b> noncompliant</span>',
+        f'<span><b>{len(beh["kinds"])}</b> kinds</span>',
+        f'<span><b>{beh["candidates"]}</b> worked examples</span>',
+    ]
+    kinds = "".join(
+        f'<span class="pill quiet">{esc(k)}</span>' for k in beh["kinds"]
+    )
+    examples = "".join(
+        f'<li><code>{esc(c["label"])}</code>'
+        f'<span class="ex-rule">{esc(c["rule"])}</span></li>'
+        for c in (candidates.get(cid) for cid in beh["candidate_ids"])
+        if c
+    )
+    return f"""
+      <article class="beh">
+        <div class="beh-head">
+          <span class="beh-title">{esc(beh['title'])}</span>
+          <span class="beh-slug">{esc(beh['id'])}</span>
+          <span class="beh-nums">{''.join(nums)}</span>
+        </div>
+        <p class="beh-rule">{esc(beh['rule'])}</p>
+        <div class="beh-meta">
+          <div><b>Why these</b>{esc(beh['why'])}</div>
+          <div><b>Detects</b>{esc(beh['detects'])}</div>
+          <div class="beh-kinds"><b>Kinds</b>{kinds}</div>
+        </div>
+        <details class="beh-ex">
+          <summary>{beh['candidates']} worked examples — the rules this replaces</summary>
+          <ol>{examples}</ol>
+        </details>
+      </article>"""
+
+
 def pattern_html(pattern, incidents, problems_by_kind):
     open_attr = " open" if pattern["meets_rule_bar"] else ""
     bar = (
@@ -226,13 +268,44 @@ def main():
     for j in judged:
         by_pattern[(j.get("class", "A"), j.get("kind", "other"))].append(j)
 
+    problems = load("problems.jsonl")
     problems_by_kind = collections.defaultdict(list)
-    for row in load("problems.jsonl"):
+    for row in problems:
         problems_by_kind[row["kind"]].append(row)
 
     sections = "".join(
         pattern_html(p, by_pattern[(p["class"], p["kind"])], problems_by_kind) for p in patterns
     )
+
+    # A behavior covers problems and lone episodes alike, so both have to be
+    # resolvable by id when the worked examples are listed.
+    candidates = {
+        p["id"]: {"label": p["id"], "rule": p.get("rule")} for p in problems
+    }
+    for inc in judged:
+        candidates.setdefault(
+            inc["id"],
+            {"label": f'{inc["kind"]} (single episode)', "rule": inc.get("rule_candidate")},
+        )
+    behaviours = load("behaviors.jsonl")
+    unassigned = load("behaviors_unassigned.jsonl")
+    beh_sections = "".join(behaviour_html(b, candidates) for b in behaviours)
+    if unassigned:
+        rows = "".join(
+            f'<li><code>{esc(u["id"])}</code>'
+            f'<span class="ex-rule">{esc(u["why"])}</span></li>'
+            for u in unassigned
+        )
+        beh_sections += f"""
+      <article class="beh" style="border-left-color: var(--rule-strong)">
+        <div class="beh-head">
+          <span class="beh-title">Under no rule</span>
+          <span class="beh-nums"><span><b>{len(unassigned)}</b> candidates</span></span>
+        </div>
+        <p class="note">Genuine one-offs. Left out rather than forced under a rule they
+        would only stretch — an honest gap is more useful than an unfollowable instruction.</p>
+        <ol class="beh-ex" style="padding-left:1.4rem">{rows}</ol>
+      </article>"""
 
     repeats = sum(1 for j in judged if j.get("repeat_after_instruction"))
     shrinks = survival.get("in_session_shrinks", 0)
@@ -272,7 +345,7 @@ def main():
 
     # Funnel. Each stage is counted from the file that stage wrote, so a missing
     # stage shows 0 rather than a number carried over from a previous run.
-    candidates = len(load("candidates_transcripts.jsonl")) + len(load("candidates_chat.jsonl"))
+    windows = len(load("candidates_transcripts.jsonl")) + len(load("candidates_chat.jsonl"))
     triaged_out = len(load("judged.jsonl"))
 
     def profile(label):
@@ -309,9 +382,12 @@ def main():
 
     page = (
         template.replace("<!--INCIDENTS-->", sections)
+        .replace("<!--BEHAVIOURS-->", beh_sections)
         .replace("{{CONFIRMED}}", str(len(judged)))
         .replace("{{PATTERNS}}", str(len(patterns)))
-        .replace("{{BAR}}", str(sum(1 for p in patterns if p["meets_rule_bar"])))
+        .replace("{{PROBLEMS}}", str(len(problems)))
+        .replace("{{BEHAVIOURS}}", str(len(behaviours)))
+        .replace("{{BEH_EPISODES}}", str(sum(b["episodes"] for b in behaviours)))
         .replace("{{REPEATS}}", str(repeats))
         .replace("{{SHRINKS}}", str(shrinks))
         .replace("{{RAW}}", str(raw_count))
@@ -326,7 +402,7 @@ def main():
         .replace("{{INT_MED_W}}", str(max(1, round(
             100 * int_stats["median_s"] / (int_stats["p90_s"] or 1)))))
         .replace("{{WINDOW}}", window)
-        .replace("{{CANDIDATES}}", f"{candidates:,}")
+        .replace("{{CANDIDATES}}", f"{windows:,}")
         .replace("{{TRIAGED}}", f"{triaged_out:,}")
         .replace("{{CLAUDE_CHARS}}", str(chars(claude_p)))
         .replace("{{USER_CHARS}}", str(chars(user_p)))
@@ -359,7 +435,10 @@ def main():
     with open(out, "w") as fh:
         fh.write(page)
     print(f"wrote {len(page) // 1024} KB -> {out}")
-    print(f"{len(judged)} incidents across {len(patterns)} patterns")
+    print(
+        f"{len(judged)} incidents, {len(problems)} problems, "
+        f"{len(behaviours)} standing rules, {len(patterns)} patterns"
+    )
 
 
 if __name__ == "__main__":

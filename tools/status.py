@@ -34,8 +34,11 @@ STAGES = [
     ("incidents.jsonl", ["triaged.jsonl"], "dedupe_incidents.py"),
     ("problems.jsonl", ["incidents.jsonl"], "merge_problems.py"),
     ("findings.jsonl", ["incidents.jsonl", "problems.jsonl"], "rank_findings.py"),
-    ("report.html", ["findings.jsonl", "problems.jsonl", "style_comparison.json",
-                     "comment_survival.json", "interrupts.jsonl"], "build_report.py"),
+    ("behavior_in/all.json", ["problems.jsonl", "incidents.jsonl"], "make_behavior_batch.py"),
+    ("behaviors.jsonl", ["behavior_in/all.json"], "merge_behaviors.py"),
+    ("report.html", ["findings.jsonl", "problems.jsonl", "behaviors.jsonl",
+                     "style_comparison.json", "comment_survival.json",
+                     "interrupts.jsonl"], "build_report.py"),
 ]
 
 # Directories of model verdicts. Newer verdicts than the merge that reads them is
@@ -44,6 +47,7 @@ DIR_INPUTS = {
     "triaged.jsonl": ["triage_out"],
     "incidents.jsonl": ["judge_out"],
     "problems.jsonl": ["problem_out"],
+    "behaviors.jsonl": ["behavior_out"],
 }
 
 

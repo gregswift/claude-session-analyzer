@@ -131,6 +131,48 @@
     display: flex; flex-direction: column;
   }
 
+  /* ---- behaviours: the layer that ships ---- */
+  .behs { display: flex; flex-direction: column; gap: 1rem; }
+  .beh {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent); border-radius: 3px;
+    padding: 1.25rem 1.4rem; display: flex; flex-direction: column; gap: 0.85rem;
+  }
+  .beh-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.9rem; }
+  .beh-title { font-family: var(--serif); font-size: 1.28rem; letter-spacing: -0.01em; }
+  .beh-slug { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); }
+  .beh-nums {
+    margin-left: auto; font-size: 0.82rem; color: var(--muted);
+    font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 0.75rem;
+  }
+  .beh-nums b { font-family: var(--mono); font-weight: 500; color: var(--ink-2); }
+  .beh-nums b.hot { color: var(--flag); }
+  .beh-rule {
+    margin: 0; padding: 0.8rem 1rem; background: var(--accent-soft);
+    color: var(--ink); font-size: 1rem; line-height: 1.55; border-radius: 2px;
+  }
+  .beh-meta { display: flex; flex-direction: column; gap: 0.45rem; font-size: 0.88rem; }
+  .beh-meta div { color: var(--ink-2); }
+  .beh-meta b {
+    font-family: var(--sans); font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.09em; color: var(--muted); margin-right: 0.5rem;
+  }
+  .beh-kinds { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .beh-ex > summary {
+    cursor: pointer; list-style: none; font-size: 0.85rem; color: var(--accent);
+    padding: 0.3rem 0; border-top: 1px solid var(--rule);
+  }
+  .beh-ex > summary::-webkit-details-marker { display: none; }
+  .beh-ex > summary::before { content: "▸ "; }
+  .beh-ex[open] > summary::before { content: "▾ "; }
+  .beh-ex ol { margin: 0.5rem 0 0; padding-left: 1.4rem; display: flex; flex-direction: column; gap: 0.6rem; }
+  .beh-ex li { font-size: 0.86rem; color: var(--ink-2); }
+  .beh-ex code {
+    font-family: var(--mono); font-size: 0.8rem; color: var(--ink);
+    background: var(--surface-2); padding: 0.05rem 0.3rem; border-radius: 2px;
+  }
+  .beh-ex .ex-rule { display: block; margin-top: 0.2rem; }
+
   /* ---- problems: the unit a rule attaches to ---- */
   .prob {
     border-left: 2px solid var(--rule); padding-left: 0.9rem;
@@ -262,7 +304,8 @@
       <div><div class="n">{{TRIAGED}}</div><div class="k">Sent to judging</div></div>
       <div><div class="n">{{RAW}}</div><div class="k">Confirmed</div></div>
       <div><div class="n">{{CONFIRMED}}</div><div class="k">Distinct episodes</div></div>
-      <div><div class="n">{{BAR}}</div><div class="k">Need a rule</div></div>
+      <div><div class="n">{{PROBLEMS}}</div><div class="k">Problems</div></div>
+      <div><div class="n">{{BEHAVIOURS}}</div><div class="k">Standing rules</div></div>
     </div>
   </header>
 
@@ -286,6 +329,30 @@
         construction. The measured signals further down need no complaint to fire, and exist as
         the check on exactly that.
       </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead">
+      <h2>The ruleset</h2>
+      <p class="prose note">
+        {{BEHAVIOURS}} standing rules, covering {{BEH_EPISODES}} of the {{CONFIRMED}} episodes.
+        These are what a plugin loads. They were found by grouping every rule candidate in one
+        pass with the failure kinds removed as a boundary — because the clusters that are
+        actually rule-shaped cut <em>across</em> kinds. The same behaviour appears as one kind in
+        one session and a different kind in the next, and grouping inside a kind can never see
+        that.
+      </p>
+      <p class="prose note">
+        The {{PROBLEMS}} problem-level rules below each name the project, tool, or vendor they
+        came from, so none of them survives contact with different work. They are kept as
+        <strong>worked examples</strong>: the evidence a rule rests on, and the regression set to
+        check a candidate rule against. Every rule here is a claim that these specific episodes
+        would not have happened.
+      </p>
+    </div>
+    <div class="behs">
+      <!--BEHAVIOURS-->
     </div>
   </section>
 

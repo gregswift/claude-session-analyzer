@@ -89,13 +89,43 @@ those batches, not by this repo.
 | `make_comment_batches.py [size]` | `comment_in/batch_NNN.json` |
 | `summarize_comments.py` | `comment_summary.json` |
 
-**Reduce and report.**
+**Reduce** — collapse duplicates, then lift the result into rules.
 
 | Tool | Writes |
 | --- | --- |
 | `dedupe_incidents.py [--gap N]` | `incidents.jsonl` |
+| `make_problem_batches.py [--min N]` | `problem_in/<kind>.json` |
+| `merge_problems.py` | `problems.jsonl` |
+| `make_behavior_batch.py` | `behavior_in/all.json` |
+| `merge_behaviors.py` | `behaviors.jsonl`, `behaviors_unassigned.jsonl` |
 | `rank_findings.py` | `findings.jsonl`, `report.md` |
 | `build_report.py` | `report.html` |
+
+**Check** — `status.py` walks the stage graph and names any output older than its
+inputs, with the command that rebuilds it. Exits 1 if anything is stale, so it
+can gate a workflow rather than just inform. An output that no longer reflects
+the data looks exactly like one that does.
+
+### Why there are three levels above an episode
+
+    kind  ->  problem  ->  behavior
+
+A **kind** is a category. It has no checkable action in it, so no rule can attach
+to it — "unverified premise" is a label, not an instruction.
+
+A **problem** is rule-shaped but scoped to the situation it came from. Problems
+are grouped within a single kind, which is what keeps them tight, and also what
+makes their rules read like the session they came from: *"read the CI workflow
+before assuming it applies"* is true and does not survive contact with a
+different project.
+
+A **behavior** is the standing instruction, found by grouping every rule
+candidate at once with the kinds removed as a boundary. That matters because the
+clusters that are actually rule-shaped cut *across* kinds: stating something from
+memory instead of reading the source appears under one kind in one session and a
+different one in the next, and grouping inside a kind can never see them
+together. Behaviors are what a ruleset loads; the problem rules stay underneath
+as worked examples and as a regression set to check a candidate rule against.
 
 ## Output location
 
