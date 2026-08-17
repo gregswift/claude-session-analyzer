@@ -14,12 +14,14 @@
   "artifact_excluded_projects": [],
   "project_label_strip": [],
 
-  "_language_comment": "The built-in patterns match how one person writes in English when annoyed. Each list below ADDS alternatives and never replaces the built-ins. Entries are literal phrases and are escaped for you; prefix an entry with 're:' to supply a raw regex fragment instead. A literal is bounded so it will not fire inside a longer word.",
+  "_extra_patterns_comment": "Terms added to the built-in text matchers, keyed by pattern. Each list ADDS alternatives and never replaces the built-ins. Entries are literal phrases and are escaped for you, bounded so they will not fire inside a longer word; prefix an entry with 're:' for a raw regex fragment. An unknown key here stops the run rather than being ignored.",
 
-  "extra_profanity": ["bruh", "yikes"],
-  "extra_negation_lead": ["hold on", "back up"],
-  "extra_correction_phrase": ["you're doing it again", "re:i (have )?repeatedly"],
-  "extra_repeat_marker": ["for the third time", "re:how many (more )?times"],
-  "extra_commit_trailers": ["Change-Id", "Reviewed-by"],
-  "extra_comment_skip": ["// biome-ignore", "re:#\\s*ruff:"]
+  "extra_patterns": {
+    "profanity": ["bruh", "yikes"],
+    "negation_lead": ["hold on", "back up"],
+    "correction_phrase": ["you're doing it again", "re:i (have )?repeatedly"],
+    "repeat_marker": ["for the third time", "re:how many (more )?times"],
+    "commit_trailers": ["Change-Id", "Reviewed-by"],
+    "comment_skip": ["// biome-ignore", "re:#\\s*ruff:"]
+  }
 }

@@ -89,16 +89,49 @@ CONFIG_DEFAULTS = {
     "excluded_project_substrings": [],
     "artifact_excluded_projects": [],
     "project_label_strip": [],
-    # Extra alternatives for the language patterns further down. Each list adds
-    # to the built-in terms and never replaces them. Entries are literal phrases
-    # unless prefixed `re:`.
-    "extra_profanity": [],
-    "extra_negation_lead": [],
-    "extra_correction_phrase": [],
-    "extra_repeat_marker": [],
-    "extra_commit_trailers": [],
-    "extra_comment_skip": [],
+    # Extra terms for the text-matching patterns further down, keyed by pattern.
+    # Nested rather than six sibling keys: these are regex terms, and next to
+    # `extra_roots` - a list of corpus directories - a flat `extra_profanity`
+    # reads like the same kind of setting when it is nothing like it.
+    "extra_patterns": {},
 }
+
+# Every pattern that accepts extra terms. Declared here rather than discovered,
+# so a typo in the config is caught on load no matter which tools that run
+# happen to build which patterns.
+PATTERN_NAMES = (
+    "profanity",           # swearing and exasperation
+    "negation_lead",       # a message that opens with a correction
+    "correction_phrase",   # a correction anywhere in the message
+    "repeat_marker",       # "I already told you" - this one gates the rule bar
+    "commit_trailers",     # tool-appended lines, stripped before comparing
+    "comment_skip",        # machine directives in code, which are not prose
+)
+
+
+def _check_pattern_config(cfg):
+    """A key nobody reads is worse than a key that fails: the run reports
+    success and the terms are simply never matched."""
+    extra = cfg.get("extra_patterns") or {}
+    if not isinstance(extra, dict):
+        raise SystemExit(
+            "ERROR: 'extra_patterns' must be an object keyed by pattern name.\n"
+            f"  Known patterns: {', '.join(PATTERN_NAMES)}"
+        )
+    for key in extra:
+        if key not in PATTERN_NAMES:
+            raise SystemExit(
+                f"ERROR: extra_patterns: '{key}' is not a pattern.\n"
+                f"  Known patterns: {', '.join(PATTERN_NAMES)}"
+            )
+    # These were six top-level keys briefly. Say so rather than ignoring them.
+    stale = [f"extra_{n}" for n in PATTERN_NAMES if f"extra_{n}" in cfg]
+    if stale:
+        raise SystemExit(
+            f"ERROR: {', '.join(stale)} moved under 'extra_patterns'.\n"
+            '  Was: "extra_profanity": ["bruh"]\n'
+            '  Now: "extra_patterns": {"profanity": ["bruh"]}'
+        )
 
 
 def load_config():
@@ -109,6 +142,7 @@ def load_config():
         print(f"config: {CONFIG_PATH}")
     elif CONFIG_PATH:
         raise SystemExit(f"ERROR: no config file at {CONFIG_PATH}")
+    _check_pattern_config(cfg)
     return cfg
 
 
@@ -320,11 +354,12 @@ def artifacts_allowed(project):
 def window_start():
     return config_required("window_start")
 
-# --- language patterns ------------------------------------------------------
-# These match how ONE person writes when they are annoyed, in English. They are
-# finders: their hits get reviewed, never treated as verdicts. Everyone's
-# phrasings differ, so every one of them can be extended from the config file
-# with an `extra_<name>` list - see csa.config.example.json.
+# --- text-matching patterns --------------------------------------------------
+# Most of these match how ONE person writes when they are annoyed, in English.
+# They are finders: their hits get reviewed, never treated as verdicts. Everyone
+# phrases things differently, so each takes extra terms from the config under
+# `extra_patterns`, keyed by the names in PATTERN_NAMES above - see
+# csa.config.example.json.
 #
 # Entries are literal phrases by default and are escaped for you. Prefix an
 # entry with `re:` to supply a raw regex fragment instead. Extending only adds
@@ -333,14 +368,15 @@ def window_start():
 
 def _term(name, entry):
     """One config entry as a regex fragment."""
+    where = f"extra_patterns.{name}"
     if not isinstance(entry, str) or not entry.strip():
-        raise SystemExit(f"ERROR: extra_{name}: entries must be non-empty strings")
+        raise SystemExit(f"ERROR: {where}: entries must be non-empty strings")
     if entry.startswith("re:"):
         fragment = entry[3:]
         try:
             re.compile(fragment)
         except re.error as exc:
-            raise SystemExit(f"ERROR: extra_{name}: bad regex {entry!r} - {exc}")
+            raise SystemExit(f"ERROR: {where}: bad regex {entry!r} - {exc}")
         return fragment
     # A literal phrase should not fire inside a longer word, so bound whichever
     # ends are word characters. Doubling a boundary the outer pattern already
@@ -354,7 +390,13 @@ def _term(name, entry):
 
 
 def extendable_pattern(name, prefix, terms, suffix, flags=re.I):
-    extra = CONFIG.get(f"extra_{name}") or []
+    """Built-in terms plus whatever the config adds for `name`."""
+    if name not in PATTERN_NAMES:
+        raise SystemExit(
+            f"ERROR: '{name}' is not in PATTERN_NAMES, so the config could never"
+            " name it. Add it there."
+        )
+    extra = (CONFIG.get("extra_patterns") or {}).get(name) or []
     if isinstance(extra, str):
         extra = [extra]
     joined = "|".join(list(terms) + [_term(name, e) for e in extra])

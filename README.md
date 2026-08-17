@@ -138,26 +138,36 @@ on them. It is gitignored here, but treat it as sensitive wherever it lands.
 ## Tuning the language patterns
 
 Six patterns match text rather than structure. Four are how one person writes in
-English when they are annoyed; two are lines that tooling appends. All of them
-are **finders** — their hits get reviewed, never treated as verdicts — and all of
-them can be extended from the config:
+English when they are annoyed; two are lines that tooling appends. All are
+**finders** — their hits get reviewed, never treated as verdicts — and all take
+extra terms from a single `extra_patterns` object:
 
-| Config key | Extends | Matches |
-| --- | --- | --- |
-| `extra_profanity` | `PROFANITY` | swearing and exasperation |
-| `extra_negation_lead` | `NEGATION_LEAD` | a message that opens with a correction |
-| `extra_correction_phrase` | `CORRECTION_PHRASE` | a correction anywhere in the message |
-| `extra_repeat_marker` | `REPEAT_MARKER` | "I already told you" — this one gates the rule bar |
-| `extra_commit_trailers` | `TRAILER` | trailers stripped before commits are compared |
-| `extra_comment_skip` | `SKIP_PATTERNS` | machine directives that are not prose |
+```json
+"extra_patterns": {
+  "profanity": ["bruh", "yikes"],
+  "repeat_marker": ["for the third time", "re:how many (more )?times"]
+}
+```
+
+| Key under `extra_patterns` | Matches |
+| --- | --- |
+| `profanity` | swearing and exasperation |
+| `negation_lead` | a message that opens with a correction |
+| `correction_phrase` | a correction anywhere in the message |
+| `repeat_marker` | "I already told you" — this one gates the rule bar |
+| `commit_trailers` | trailers stripped before commits are compared |
+| `comment_skip` | machine directives in code, which are not prose |
 
 Each list **adds** alternatives; the built-in terms always stay in. Entries are
 literal phrases and are escaped for you, bounded so they will not fire inside a
-longer word. Prefix an entry with `re:` for a raw regex fragment. A bad regex or
-an empty entry stops the run and names the key it came from, rather than
-silently matching nothing.
+longer word — `"bruh"` matches `bruh` but not `bruhaha`. Prefix an entry with
+`re:` for a raw regex fragment.
 
-`extra_repeat_marker` is the one worth spending time on. Whether a failure counts
+Anything wrong here stops the run and names where it came from: an unknown key,
+an empty entry, a bad regex fragment. The failure this avoids is a term that is
+accepted, never matched, and reported as a clean run.
+
+`repeat_marker` is the one worth spending time on. Whether a failure counts
 as noncompliant — an instruction already existed and was broken anyway — is what
 separates a pattern that needs a standing rule from one a single correction
 fixes. Miss the way you phrase "I already told you" and those failures rank as
