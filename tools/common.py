@@ -25,7 +25,9 @@ def _output_arg():
 
 # Flags that consume the argument after them, so positional_args does not
 # mistake a flag's value for a positional.
-_VALUE_FLAGS = ("--output", "-o", "--config", "--gap", "--min-confidence")
+_VALUE_FLAGS = (
+    "--output", "-o", "--config", "--gap", "--min-confidence", "--rules", "--sweep",
+)
 
 
 def positional_args():

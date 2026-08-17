@@ -78,7 +78,7 @@ those batches, not by this repo.
 | `collect_prs.py [--refresh]` | `prs.jsonl` |
 | `match_rewrites.py` | `rewrites.jsonl` |
 | `compare_style.py` | `style_comparison.json` |
-| `detect_comment_rewrites.py` | `comment_survival.json` |
+| `detect_comment_rewrites.py` | `comment_survival.json`, `comment_outcomes.jsonl` |
 
 **Judge** — batch out for classification, then merge the verdicts back.
 
@@ -126,6 +126,48 @@ memory instead of reading the source appears under one kind in one session and a
 different one in the next, and grouping inside a kind can never see them
 together. Behaviors are what a ruleset loads; the problem rules stay underneath
 as worked examples and as a regression set to check a candidate rule against.
+
+## Would a rule have caught anything?
+
+`backtest_rules.py` replays a candidate enforcement rule over the corpus and asks
+whether it would have fired, and whether it would have been right. It is **not**
+part of the report: it answers a question you ask while designing a rule, not one
+you ask every time the findings are rebuilt.
+
+```sh
+cp hook_rules.example.json hook_rules.json     # then edit
+python3 tools/backtest_rules.py
+python3 tools/backtest_rules.py --sweep chars  # try every threshold, don't guess one
+```
+
+Rules are declared in JSON rather than written as code, so adding one is editing
+a file:
+
+```json
+{
+  "name": "commit body over 400 chars",
+  "target": "written_artifacts",
+  "label": "rewritten",
+  "applies_to": {"kind": {"eq": "commit_message"}, "landed": {"eq": true}},
+  "when": {"chars": {"gt": 400}}
+}
+```
+
+`applies_to` is the population the rule could ever fire within, and sets the base
+rate. `when` is the trigger. Keeping them separate matters: scoping the trigger
+while measuring the base rate over everything scored that exact rule at 1.42x
+when its real value is 1.00x.
+
+**Read the `lift` column**, not precision. Lift is precision over the base rate;
+1.00x means the rule fires without predicting anything. `fires_per_week` is the
+other one that decides whether a rule is usable — a precise rule that fires
+twelve times a week gets switched off.
+
+Labels are proxies for "this was a real problem": `rewritten` (you changed the
+body), `shrunk` (a shorter version replaced it), `not_survived` (it is not in the
+file now). You do not rewrite everything that is wrong, so they understate
+precision — which is another reason to read lift, since that bias lands on the
+base rate too.
 
 ## Output location
 

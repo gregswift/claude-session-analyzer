@@ -17,7 +17,7 @@ So measure survival instead of opinion:
                       Someone changed or deleted it, and mostly that is the user.
 
 Usage: python3 tools/detect_comment_rewrites.py
-Writes: findings/comment_survival.json
+Writes: findings/comment_survival.json, findings/comment_outcomes.jsonl
 """
 
 import collections
@@ -30,7 +30,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import FINDINGS, ensure_findings_dir  # noqa: E402
+from common import FINDINGS, ensure_findings_dir, write_jsonl  # noqa: E402
 
 SAME_GROUND = 0.45  # normalized similarity that means "about the same thing"
 MATERIALLY_SHORTER = 0.75  # later block is this fraction of the earlier or less
@@ -82,6 +82,27 @@ def main():
                     if isinstance(v, dict) and v.get("id"):
                         verdicts[v["id"]] = v.get("verdict")
 
+    # Per-comment outcome, alongside the aggregates. The aggregates say what the
+    # corpus looks like; these say what happened to each individual comment,
+    # which is what a backtest needs to label a rule's fire as right or wrong.
+    outcome_of = {
+        r["id"]: {
+            "id": r["id"],
+            "session": r.get("session"),
+            "ts": r.get("ts"),
+            "file": os.path.basename(r.get("file") or ""),
+            "project": r.get("project"),
+            "words": r.get("words"),
+            "chars": len(r.get("comment") or ""),
+            "verdict": verdicts.get(r["id"]),
+            "shrunk": False,
+            "shrink": None,
+            "checked": False,
+            "survived": None,
+        }
+        for r in rows
+    }
+
     # ---- 1. in-session shrink rewrites ----------------------------------
     by_file = collections.defaultdict(list)
     for r in rows:
@@ -103,6 +124,8 @@ def main():
                 if score < SAME_GROUND:
                     continue
                 superseded_ids.add(earlier["id"])
+                outcome_of[earlier["id"]]["shrunk"] = True
+                outcome_of[earlier["id"]]["shrink"] = round(1 - len(l_norm) / len(e_norm), 3)
                 shrinks.append(
                     {
                         "file": os.path.basename(path),
@@ -134,6 +157,9 @@ def main():
         checked += 1
         target = norm(r["comment"])
         best = max((ratio(target, b) for b in blocks), default=0.0)
+        outcome_of[r["id"]]["checked"] = True
+        outcome_of[r["id"]]["survived"] = best >= SURVIVED
+        outcome_of[r["id"]]["best_match"] = round(best, 3)
         if best < SURVIVED:
             gone.append(
                 {
@@ -179,6 +205,9 @@ def main():
     path = os.path.join(FINDINGS, "comment_survival.json")
     with open(path, "w") as fh:
         json.dump(result, fh, indent=2)
+    write_jsonl(
+        os.path.join(FINDINGS, "comment_outcomes.jsonl"), list(outcome_of.values())
+    )
     print(
         json.dumps(
             {k: v for k, v in result.items() if not k.endswith("examples")}, indent=2

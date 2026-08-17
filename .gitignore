@@ -10,3 +10,4 @@ csa.config.json
 __pycache__/
 *.pyc
 .venv/
+hook_rules.json

@@ -1,0 +1,148 @@
+{
+  "_comment": "Candidate enforcement rules, replayed over the corpus by tools/backtest_rules.py. Copy to hook_rules.json and edit. A rule is {name, target, label, applies_to, when}. `applies_to` is the population the rule could ever fire within and sets the base rate; `when` is the trigger. Both are {field: {op: value}}, all ANDed; ops are gt/gte/lt/lte/eq for numbers and re/not_re for text. Scoping the trigger without scoping applies_to makes a worthless rule look good - read the lift column, and 1.00x means the rule predicts nothing.",
+  "_targets": {
+    "written_artifacts": "commit messages and PR bodies as the model wrote them. fields: chars, lines, words, text, kind. labels: rewritten, landed (bool)",
+    "code_comments": "comment blocks, outcomes only. fields: chars, words. labels: shrunk, not_survived",
+    "comment_text": "comment blocks with their text. fields: chars, words, lines, text. labels: shrunk, not_survived"
+  },
+  "rules": [
+    {
+      "name": "commit body over 400 chars (validation)",
+      "target": "written_artifacts",
+      "label": "rewritten",
+      "applies_to": {
+        "kind": {
+          "eq": "commit_message"
+        },
+        "landed": {
+          "eq": true
+        }
+      },
+      "when": {
+        "chars": {
+          "gt": 400
+        }
+      }
+    },
+    {
+      "name": "commit body over 1000 chars",
+      "target": "written_artifacts",
+      "label": "rewritten",
+      "applies_to": {
+        "kind": {
+          "eq": "commit_message"
+        },
+        "landed": {
+          "eq": true
+        }
+      },
+      "when": {
+        "chars": {
+          "gt": 1000
+        }
+      }
+    },
+    {
+      "name": "body has 10+ lines",
+      "target": "written_artifacts",
+      "label": "rewritten",
+      "applies_to": {
+        "kind": {
+          "eq": "commit_message"
+        },
+        "landed": {
+          "eq": true
+        }
+      },
+      "when": {
+        "lines": {
+          "gte": 10
+        }
+      }
+    },
+    {
+      "name": "body uses a bullet list",
+      "target": "written_artifacts",
+      "label": "rewritten",
+      "applies_to": {
+        "kind": {
+          "eq": "commit_message"
+        },
+        "landed": {
+          "eq": true
+        }
+      },
+      "when": {
+        "text": {
+          "re": "^\\s*[-*]\\s"
+        }
+      }
+    },
+    {
+      "name": "body uses a markdown heading",
+      "target": "written_artifacts",
+      "label": "rewritten",
+      "applies_to": {
+        "kind": {
+          "eq": "commit_message"
+        },
+        "landed": {
+          "eq": true
+        }
+      },
+      "when": {
+        "text": {
+          "re": "^#{1,4}\\s"
+        }
+      }
+    },
+    {
+      "name": "body contains an em-dash",
+      "target": "written_artifacts",
+      "label": "rewritten",
+      "applies_to": {
+        "kind": {
+          "eq": "commit_message"
+        },
+        "landed": {
+          "eq": true
+        }
+      },
+      "when": {
+        "text": {
+          "re": "—"
+        }
+      }
+    },
+    {
+      "name": "comment over 15 words",
+      "target": "code_comments",
+      "label": "shrunk",
+      "when": {
+        "words": {
+          "gt": 15
+        }
+      }
+    },
+    {
+      "name": "comment over 30 words",
+      "target": "code_comments",
+      "label": "shrunk",
+      "when": {
+        "words": {
+          "gt": 30
+        }
+      }
+    },
+    {
+      "name": "comment over 15 words (survival)",
+      "target": "code_comments",
+      "label": "not_survived",
+      "when": {
+        "words": {
+          "gt": 15
+        }
+      }
+    }
+  ]
+}

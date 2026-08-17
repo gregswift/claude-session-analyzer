@@ -29,6 +29,7 @@ STAGES = [
     ("style_comparison.json", ["git_landed.jsonl"], "compare_style.py"),
     ("rewrites.jsonl", ["artifacts_authored.jsonl", "git_landed.jsonl", "prs.jsonl"], "match_rewrites.py"),
     ("comment_survival.json", ["code_comments.jsonl"], "detect_comment_rewrites.py"),
+    ("comment_outcomes.jsonl", ["code_comments.jsonl"], "detect_comment_rewrites.py"),
     ("comment_summary.json", ["code_comments.jsonl"], "summarize_comments.py"),
     ("triaged.jsonl", ["candidates_transcripts.jsonl", "candidates_chat.jsonl"], "merge_triage.py"),
     ("incidents.jsonl", ["triaged.jsonl"], "dedupe_incidents.py"),
