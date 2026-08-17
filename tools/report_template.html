@@ -172,6 +172,26 @@
     background: var(--surface-2); padding: 0.05rem 0.3rem; border-radius: 2px;
   }
   .beh-ex .ex-rule { display: block; margin-top: 0.2rem; }
+  .beh-pref {
+    border-top: 1px solid var(--rule); padding-top: 0.7rem;
+    display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .beh-pref > b {
+    font-family: var(--sans); font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.09em; color: var(--warn);
+  }
+  .beh-pref ul { margin: 0; padding-left: 1.1rem; list-style: none; }
+  .beh-pref li {
+    border-left: 2px solid var(--warn-soft); padding-left: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .beh-pref .ex-rule { display: block; font-size: 0.92rem; color: var(--ink); }
+  .beh-pref q {
+    display: block; margin-top: 0.3rem; font-family: var(--serif);
+    font-size: 0.85rem; color: var(--muted); quotes: none;
+  }
+  .beh-pref q::before { content: "asked for: “"; }
+  .beh-pref q::after { content: "”"; }
 
   /* ---- problems: the unit a rule attaches to ---- */
   .prob {

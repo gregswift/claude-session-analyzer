@@ -290,35 +290,51 @@ def apply_overrides(incidents):
     re-run. Keyed by incident id in findings/overrides.json.
     """
     path = os.path.join(FINDINGS, "overrides.json")
+    pref_path = os.path.join(FINDINGS, "preference_rules.jsonl")
     if not os.path.exists(path):
+        write_jsonl(pref_path, [])
         return 0
     overrides = json.load(open(path))
     applied = 0
 
-    # Entries marked _standalone are rules the user called for directly rather than
-    # corrections to an existing finding. They enter as their own episode: the
-    # 1Password signing timeout is standalone because they say it is the most
-    # frequent failure they hit, and a corpus count cannot see it - the away-from-
-    # desk timeouts leave no transcript, and it missed the one that hit the very
-    # session where this was written.
+    # Entries marked _standalone are rules the user called for directly rather
+    # than corrections to an existing finding. A corpus count cannot see some
+    # things: the 1Password signing timeout is the most frequent failure they
+    # hit, but the away-from-desk timeouts leave no transcript, and the count
+    # missed even the one that hit the very session where this was written.
+    preference_rules = []
     for key, patch in overrides.items():
         if not patch.get("_standalone"):
             continue
         row = {k: v for k, v in patch.items() if k != "_standalone"}
-        row.update({"id": key, "confirmed": True, "merged_ids": [key],
-                    "confidence": 1.0})
-        row.setdefault("source", "user")
-        row.setdefault("occurrences", 1)
+        row["id"] = key
+
         # A standalone arrives one of two ways, and they are not the same claim.
         # `correction` means the user pushed back and the rule followed; the
-        # 1Password one did. `preference` means they asked for it with nothing in
-        # the corpus behind it. Marking the second as a correction would put words
-        # in their mouth, in a report whose whole point is quoting them exactly.
-        origin = row.pop("origin", "correction")
-        row["corrected_by_user"] = origin == "correction"
-        row["preference_only"] = origin == "preference"
+        # 1Password one did, with a quote. `preference` means they asked for it
+        # with nothing in the corpus behind it.
+        #
+        # A preference rule is not an episode and must not be counted as one. It
+        # has no severity to rank, nobody objected to it, and letting it into
+        # incidents.jsonl would inflate the episode total, its kind's counts and
+        # its behavior's rollup with something no evidence supports - in a report
+        # whose entire claim is that the numbers come from the corpus. It travels
+        # in its own file and attaches to a behavior by name.
+        if row.pop("origin", "correction") == "preference":
+            if row.get("behavior") is None:
+                sys.exit(f"{key}: a preference rule must name the behavior it belongs to")
+            preference_rules.append(row)
+            applied += 1
+            continue
+
+        row.update({"confirmed": True, "merged_ids": [key], "confidence": 1.0,
+                    "corrected_by_user": True})
+        row.setdefault("source", "user")
+        row.setdefault("occurrences", 1)
         incidents.append(row)
         applied += 1
+
+    write_jsonl(pref_path, preference_rules)
 
     for inc in incidents:
         patch = overrides.get(inc["id"])

@@ -121,7 +121,32 @@ def incident_html(inc, index):
       </article>"""
 
 
-def behaviour_html(beh, candidates):
+def preference_html(rules):
+    """Rules the user asked for with nothing in the corpus behind them.
+
+    Rendered inside the behavior they belong to but outside its counts, and said
+    so plainly. They are real rules and belong in the ruleset; they are not
+    evidence, and letting them touch an episode total would make every number in
+    the report mean something slightly different from what it claims.
+    """
+    if not rules:
+        return ""
+    items = "".join(
+        f'<li><span class="ex-rule">{esc(r.get("rule_candidate"))}</span>'
+        f'<q>{esc(r.get("evidence_quote"))}</q></li>'
+        for r in rules
+    )
+    return f"""
+        <div class="beh-pref">
+          <b>Asked for, not observed</b>
+          <p class="note">Not counted above: nothing in the corpus objects to this, so it has
+          no episode, no severity and no session behind it. It is here because the user asked
+          for it.</p>
+          <ul>{items}</ul>
+        </div>"""
+
+
+def behaviour_html(beh, candidates, preference_rules=()):
     """One standing rule, with the problem rules it generalises kept underneath.
 
     The examples stay visible because a rule with no evidence under it cannot be
@@ -160,6 +185,7 @@ def behaviour_html(beh, candidates):
           <summary>{beh['candidates']} worked examples — the rules this replaces</summary>
           <ol>{examples}</ol>
         </details>
+        {preference_html(preference_rules)}
       </article>"""
 
 
@@ -291,7 +317,15 @@ def main():
         )
     behaviours = load("behaviors.jsonl")
     unassigned = load("behaviors_unassigned.jsonl")
-    beh_sections = "".join(behaviour_html(b, candidates) for b in behaviours)
+    prefs = collections.defaultdict(list)
+    for rule in load("preference_rules.jsonl"):
+        prefs[rule.get("behavior")].append(rule)
+    orphaned = [b for b in prefs if b not in {x["id"] for x in behaviours}]
+    if orphaned:
+        sys.exit(f"preference rules name behaviors that do not exist: {orphaned}")
+    beh_sections = "".join(
+        behaviour_html(b, candidates, prefs.get(b["id"], [])) for b in behaviours
+    )
     if unassigned:
         rows = "".join(
             f'<li><code>{esc(u["id"])}</code>'

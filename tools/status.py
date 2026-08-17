@@ -34,13 +34,15 @@ STAGES = [
     ("comment_summary.json", ["code_comments.jsonl"], "summarize_comments.py"),
     ("triaged.jsonl", ["candidates_transcripts.jsonl", "candidates_chat.jsonl"], "merge_triage.py"),
     ("incidents.jsonl", ["triaged.jsonl"], "dedupe_incidents.py"),
+    ("preference_rules.jsonl", ["triaged.jsonl"], "dedupe_incidents.py"),
     ("problems.jsonl", ["incidents.jsonl"], "merge_problems.py"),
     ("findings.jsonl", ["incidents.jsonl", "problems.jsonl"], "rank_findings.py"),
     ("behavior_in/all.json", ["problems.jsonl", "incidents.jsonl"], "make_behavior_batch.py"),
     ("behaviors.jsonl", ["behavior_in/all.json"], "merge_behaviors.py"),
     ("report.html", ["findings.jsonl", "problems.jsonl", "behaviors.jsonl",
                      "style_comparison.json", "comment_survival.json",
-                     "reversals.json", "interrupts.jsonl"], "build_report.py"),
+                     "reversals.json", "interrupts.jsonl",
+                     "preference_rules.jsonl"], "build_report.py"),
 ]
 
 # Directories of model verdicts. Newer verdicts than the merge that reads them is
