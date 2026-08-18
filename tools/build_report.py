@@ -464,7 +464,7 @@ def main():
         .replace("{{COMMENT_LOST}}", f"{lost:,}")
         .replace("{{COMMENT_SURV_W}}", str(max(1, round(100 * survived / widest_c))))
         .replace("{{COMMENT_LOST_W}}", str(max(1, round(100 * lost / widest_c))))
-        .replace("{{RATIO}}", str(style.get("ratios", {}).get("body_chars_median", "")))
+        .replace("{{RATIO}}", str((style.get("ratios") or {}).get("body_chars_median", "")))
     )
 
     out = os.path.join(FINDINGS, "report.html")

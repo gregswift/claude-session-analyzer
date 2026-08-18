@@ -36,9 +36,9 @@ def main():
     batch = json.load(open(batch_path))
     candidates = {c["id"]: c for c in batch["candidates"]}
 
-    out_path = os.path.join(FINDINGS, "behavior_out", "behaviors.json")
+    out_path = os.path.join(FINDINGS, "behavior_out", "all.json")
     if not os.path.exists(out_path):
-        sys.exit("no findings/behavior_out/behaviors.json - run the behavior grouping first")
+        sys.exit("no findings/behavior_out/all.json - run the behavior grouping first")
     data = json.load(open(out_path))
 
     prob_path = os.path.join(FINDINGS, "problems.jsonl")

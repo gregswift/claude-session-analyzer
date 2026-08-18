@@ -74,6 +74,9 @@ def normalize(parsed):
         for key in ("results", "items", "verdicts", "output"):
             if isinstance(parsed.get(key), list):
                 return parsed[key]
+        # A bare object is the correct shape for passes that emit one object
+        # per batch (the problem pass), not one verdict per input item.
+        return parsed
     raise ValueError(f"unexpected model output shape: {type(parsed)}")
 
 
