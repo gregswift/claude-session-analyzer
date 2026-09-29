@@ -53,6 +53,9 @@ def main():
         if not name.endswith(".json"):
             continue
         data = json.load(open(os.path.join(out_dir, name)))
+        # The generic judge wraps a bare object in a list; accept both shapes.
+        if isinstance(data, list):
+            data = data[0] if data else {}
         kind = data.get("kind") or name[:-5]
         ordered = report_order(by_kind.get(kind, []))
         if not ordered:

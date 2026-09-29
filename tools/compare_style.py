@@ -83,18 +83,27 @@ def main():
         ],
     }
 
-    hand_p = next(p for p in result["profiles"] if p["label"] == "user_hand_written")
-    claude_p = next(
-        p for p in result["profiles"] if p["label"] == "claude_co_authored"
+    hand_p = next(
+        (p for p in result["profiles"] if p["label"] == "user_hand_written"), None
     )
-    result["ratios"] = {
-        "body_chars_median": round(
-            claude_p["body_chars_median"] / max(1, hand_p["body_chars_median"]), 2
-        ),
-        "body_lines_median": round(
-            claude_p["body_lines_median"] / max(1, hand_p["body_lines_median"]), 2
-        ),
-    }
+    claude_p = next(
+        (p for p in result["profiles"] if p["label"] == "claude_co_authored"), None
+    )
+    if hand_p and claude_p:
+        result["ratios"] = {
+            "body_chars_median": round(
+                claude_p["body_chars_median"] / max(1, hand_p["body_chars_median"]), 2
+            ),
+            "body_lines_median": round(
+                claude_p["body_lines_median"] / max(1, hand_p["body_lines_median"]), 2
+            ),
+        }
+    else:
+        result["ratios"] = None
+        print(
+            "WARNING: no claude_co_authored commits for the configured author "
+            "emails; ratios skipped"
+        )
 
     out = os.path.join(FINDINGS, "style_comparison.json")
     with open(out, "w") as fh:

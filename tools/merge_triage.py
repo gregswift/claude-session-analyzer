@@ -120,6 +120,8 @@ def main():
         compact_path = os.path.join(FINDINGS, "triage_in")
         lookup = {}
         for name in sorted(os.listdir(compact_path)):
+            if not name.endswith(".json"):
+                continue
             for item in json.load(open(os.path.join(compact_path, name))):
                 lookup[item["id"]] = item
         with open(os.path.join(FINDINGS, "triage_missing.json"), "w") as fh:

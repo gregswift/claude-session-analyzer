@@ -53,6 +53,36 @@ It will not fall back to a default and sweep the wrong corpus.
 missing value is the same hard error, naming the key and the files that were
 checked.
 
+## Running the pipeline
+
+`make` (or `make all`) runs the whole pipeline to `findings/report.html`. Each
+stage is a file target carrying its real dependencies, so only stale outputs
+rebuild. The model passes read batches from `findings/*_in/` and expect verdicts
+back in `findings/*_out/`, driven by `judge_batches.py` through Ollama.
+
+```sh
+make            # full pipeline to findings/report.html
+make status     # report which outputs are stale (exits 1 if any)
+make clean      # remove findings/
+```
+
+The judging passes need a model. `MODEL` overrides it (default
+`minimax-m3:cloud`):
+
+```sh
+make MODEL=some-other-model
+```
+
+If you have a claude.ai export, point `CHAT_EXPORT` at the unzipped directory to
+include it; otherwise that stage is skipped.
+
+```sh
+make CHAT_EXPORT=/path/to/export
+```
+
+To run one stage at a time: `make extract`, `make corroborate`, `make judge`,
+`make reduce`, `make report`.
+
 ## How it works
 
 The pipeline runs in stages, each writing to `findings/`. Stages that need a
